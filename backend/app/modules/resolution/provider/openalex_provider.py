@@ -19,6 +19,10 @@ LONGEST_WORTHWHILE_WAIT_SECONDS = 60.0
 
 FILTER_RESERVED_CHARS = re.compile(r"[,|:+()<>=!?*\"]")
 
+MIN_ABSTRACT_CHARS = 180
+TRAILING_YEAR = re.compile(r"\.\s*(?:19|20)\d{2}\.?\s*$")
+CITATION_SHAPED_MAX_CHARS = 500
+
 CSL_TYPE_BY_OPENALEX_TYPE: dict[str, CSLType] = {
     "article": "article-journal",
     "journal-article": "article-journal",
@@ -46,6 +50,20 @@ SELECT_FIELDS = ",".join(
 )
 
 
+def looks_like_an_abstract(text: str | None) -> bool:
+    if not text:
+        return False
+
+    stripped = text.strip()
+    if len(stripped) < MIN_ABSTRACT_CHARS:
+        return False
+
+    if TRAILING_YEAR.search(stripped) and len(stripped) < CITATION_SHAPED_MAX_CHARS:
+        return False
+
+    return True
+
+
 def reconstruct_abstract(inverted_index: dict[str, list[int]] | None) -> str | None:
     if not inverted_index:
         return None
@@ -56,7 +74,10 @@ def reconstruct_abstract(inverted_index: dict[str, list[int]] | None) -> str | N
         for position in positions
     )
     abstract = " ".join(word for _, word in positioned).strip()
-    return abstract or None
+
+    if not looks_like_an_abstract(abstract):
+        return None
+    return abstract
 
 
 def filter_safe(value: str) -> str:
@@ -321,6 +342,23 @@ class OpenAlexProvider:
 #   abstract_inverted_index is a map of word to positions, not text. OpenAlex
 #   publishes it this way for licensing reasons. reconstruct_abstract puts the
 #   words back in order, which is the only way stage 3 ever sees an abstract.
+#
+# Some records carry a citation string in that field rather than an abstract.
+# The RNN encoder-decoder paper reconstructs to "Kyunghyun Cho, Bart van
+# Merrienboer, ... Proceedings of EMNLP. 2014." — perfectly ordered, and
+# useless. It is a data quality problem at the source, not a reconstruction
+# bug, and it is invisible unless you read the output.
+#
+# It matters because stage 3 checks claims against abstracts. Handing that
+# string to the review model wastes a call and produces a finding that says
+# nothing, so an abstract that does not look like prose is treated as absent.
+# Semantic Scholar is then asked for it through the existing backfill, which
+# is exactly the gap that fallback was built for.
+#
+# The test is deliberately blunt: too short to be an abstract, or short and
+# ending in a bare year the way a citation does. Anything cleverer would risk
+# discarding real abstracts, and a false negative here merely triggers a
+# fallback lookup rather than losing information.
 #
 # Author names arrive as one display string, so split_display_name takes the
 # last whitespace-separated token as the family name. That is a heuristic and

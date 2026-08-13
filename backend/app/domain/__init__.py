@@ -29,6 +29,8 @@ from app.domain.library import (
 )
 
 __all__ = [
+    "FLOATS_SECTION_ID",
+    "FRONT_MATTER_SECTION_ID",
     "BBox",
     "Block",
     "BlockKind",
@@ -40,8 +42,6 @@ __all__ = [
     "CiteNode",
     "Document",
     "ExternalIds",
-    "FLOATS_SECTION_ID",
-    "FRONT_MATTER_SECTION_ID",
     "Inline",
     "Library",
     "MatchCandidate",

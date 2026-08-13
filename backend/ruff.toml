@@ -1,0 +1,40 @@
+line-length = 90
+target-version = "py310"
+
+[lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
+
+ignore = [
+    "B008",
+    "E501",
+    "RUF001",
+    "SIM103",
+]
+
+[lint.per-file-ignores]
+"tests/*" = ["E402"]
+
+# Notes
+#
+# B008 (function call in default argument) is disabled because FastAPI's whole
+# dependency system is built on it: `x: Provider = Depends(get_provider)` is the
+# documented idiom, not an accident. Leaving the rule on produced fourteen
+# warnings, every one of them a correct route signature, which is how a lint
+# signal stops being read.
+#
+# E501 is off because the formatter owns line length. Warning about a line the
+# formatter chose is noise.
+#
+# RUF001 flags "ambiguous" Unicode characters and would be actively harmful
+# here. GROUP_SEPARATORS and the style regexes contain EN DASH, EM DASH and
+# Unicode HYPHEN deliberately, because real PDFs typeset citation ranges as
+# [1-3] with any of them. Taking the rule's advice and replacing them with
+# ASCII hyphens would silently stop those ranges from parsing. The characters
+# are the feature.
+#
+# SIM103 wants multi-guard predicates collapsed into one boolean return.
+# looks_like_an_abstract and is_abbreviation are guard ladders where each early
+# return documents a distinct reason for rejecting the input, and inlining them
+# trades that for a longer expression nobody can extend.
+#
+# I is on so import order is mechanical rather than argued about.

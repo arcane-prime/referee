@@ -61,9 +61,17 @@ class TestOpenAlexFieldShapes:
         assert strip_openalex_id("https://openalex.org/W2064675550") == "W2064675550"
 
     def test_inverted_index_is_rebuilt_in_word_order(self):
-        inverted = {"Learning": [0], "to": [1, 3], "store": [2], "information": [4]}
+        prose = (
+            "We propose a novel architecture that relies entirely on attention "
+            "mechanisms to draw global dependencies between the input and the output "
+            "sequence, dispensing with recurrence and convolutions altogether in "
+            "every layer of the model."
+        )
+        inverted: dict[str, list[int]] = {}
+        for position, word in enumerate(prose.split()):
+            inverted.setdefault(word, []).append(position)
 
-        assert reconstruct_abstract(inverted) == "Learning to store to information"
+        assert reconstruct_abstract(inverted) == prose
 
     def test_missing_abstract_index_yields_none(self):
         assert reconstruct_abstract(None) is None
@@ -275,3 +283,48 @@ class TestDuplicateCollapsing:
         ranked = matcher.rank(reference("Attention is all you need", ["Vaswani"], 2017), [a, b])
 
         assert len(ranked) == 1
+
+
+class TestAbstractQuality:
+    def test_a_real_abstract_is_accepted(self):
+        from app.modules.resolution.provider.openalex_provider import (
+            looks_like_an_abstract,
+        )
+
+        real = (
+            "We propose the Transformer, a model architecture relying entirely on an "
+            "attention mechanism to draw global dependencies between input and output. "
+            "Experiments on two machine translation tasks show these models to be "
+            "superior in quality while being more parallelizable and requiring "
+            "significantly less time to train."
+        )
+        assert looks_like_an_abstract(real)
+
+    def test_a_citation_string_is_rejected_as_an_abstract(self):
+        from app.modules.resolution.provider.openalex_provider import (
+            looks_like_an_abstract,
+        )
+
+        citation = (
+            "Kyunghyun Cho, Bart van Merrienboer, Caglar Gulcehre, Dzmitry Bahdanau, "
+            "Fethi Bougares, Holger Schwenk, Yoshua Bengio. Proceedings of the 2014 "
+            "Conference on Empirical Methods in Natural Language Processing. 2014."
+        )
+        assert not looks_like_an_abstract(citation)
+
+    def test_a_too_short_abstract_is_rejected(self):
+        from app.modules.resolution.provider.openalex_provider import (
+            looks_like_an_abstract,
+        )
+
+        assert not looks_like_an_abstract("A short note about the method.")
+
+    def test_a_citation_shaped_index_reconstructs_to_none(self):
+        from app.modules.resolution.provider.openalex_provider import reconstruct_abstract
+
+        words = ["Kyunghyun", "Cho", "and", "Yoshua", "Bengio", ".", "Proceedings", "of", "EMNLP", ".", "2014", "."]
+        inverted = {}
+        for position, word in enumerate(words):
+            inverted.setdefault(word, []).append(position)
+
+        assert reconstruct_abstract(inverted) is None

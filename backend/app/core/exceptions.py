@@ -51,6 +51,11 @@ class NotExtractedError(RefereeError):
     code = "not_extracted"
 
 
+class ReviewUnavailableError(RefereeError):
+    status_code = 502
+    code = "review_unavailable"
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(RefereeError)
     async def handle_referee_error(_: Request, exc: RefereeError) -> JSONResponse:

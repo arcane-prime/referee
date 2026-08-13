@@ -19,7 +19,7 @@ AUTHOR_YEAR_MARKER = re.compile(r"\(\s*[A-Z][A-Za-z'`-]+[^()]{0,40}\b(1[6-9]\d{2
 
 
 def build_inlines(paragraph_xml: str):
-    element = etree.fromstring(f"<p {TEI_NS}>{paragraph_xml}</p>".encode("utf-8"))
+    element = etree.fromstring(f"<p {TEI_NS}>{paragraph_xml}</p>".encode())
     return InlineProvider(IdMinter()).build(element)
 
 

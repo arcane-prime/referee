@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from app.core.exceptions import NotExtractedError
 from app.core.storage_provider import StorageProvider
 from app.domain.document import Document
-from app.domain.library import RawReference
+from app.domain.library import RawReference, Reference
 from app.modules.extraction.dto.extraction_dto import (
     ExtractionResultDto,
     ExtractionSummaryDto,
@@ -53,9 +53,17 @@ class ExtractionProvider:
             extracted_at=datetime.now(timezone.utc),
             parser=self._parser.name,
             document=document,
-            references=references,
+            references=[Reference.from_raw(raw) for raw in references],
             summary=self._summarise(document, references),
         )
+
+    def load_document(self, paper_id: str) -> Document:
+        payload = self._storage.read_revision(paper_id, 0)
+        if payload is None:
+            raise NotExtractedError(
+                f"Paper '{paper_id}' has not been extracted yet. Run extract first."
+            )
+        return Document.model_validate_json(payload)
 
     def load_references(self, paper_id: str) -> list[RawReference]:
         tei_xml = self._storage.read_tei(paper_id)

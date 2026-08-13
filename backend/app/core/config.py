@@ -32,6 +32,13 @@ class Settings(BaseSettings):
     search_timeout_seconds: float = 20.0
     resolution_concurrency: int = 3
     search_fallback_enabled: bool = True
+    verification_budget_seconds: float = 75.0
+
+    cerebras_url: str = "https://api.cerebras.ai"
+    cerebras_api_key: str = ""
+    review_model: str = "gpt-oss-120b"
+    review_timeout_seconds: float = 90.0
+    review_concurrency: int = 4
 
     http_cache_enabled: bool = True
     http_cache_ttl_hours: float = 720.0

@@ -86,13 +86,111 @@ export interface ExtractionSummary {
   style_confidence: number;
 }
 
+export interface Verification {
+  attempted: boolean;
+  succeeded: boolean;
+  message: string | null;
+  search_api: string | null;
+  resolved: number;
+  ambiguous: number;
+  unresolved: number;
+  with_abstract: number;
+  with_doi: number;
+}
+
 export interface ExtractionResult {
   paper_id: string;
   extracted_at: string;
   parser: string;
   document: ExtractedDocument;
-  references: RawReference[];
+  references: ResolvedReference[];
   summary: ExtractionSummary;
+  verification: Verification;
+}
+
+export type ResolutionStatus = "resolved" | "ambiguous" | "unresolved";
+
+export interface ExternalIds {
+  doi: string | null;
+  openalex: string | null;
+  semantic_scholar: string | null;
+}
+
+export interface Resolution {
+  status: ResolutionStatus;
+  score: number;
+  matched: CSLItem | null;
+  external_ids: ExternalIds;
+  abstract: string | null;
+  source_api: string | null;
+  abstract_source: string | null;
+  reason: string | null;
+}
+
+export interface ResolvedReference {
+  id: string;
+  raw: string;
+  parsed: CSLItem | null;
+  resolution: Resolution;
+  provenance: string;
+}
+
+export type SupportGrade =
+  | "supports"
+  | "partially_supports"
+  | "not_supported"
+  | "insufficient_evidence";
+
+export interface Evidence {
+  ref_id: string;
+  quote: string | null;
+  grade: SupportGrade;
+  note: string | null;
+  quote_verified: boolean;
+  source_title: string | null;
+  source_doi: string | null;
+  source_url: string | null;
+}
+
+export interface SuggestedSource {
+  title: string;
+  doi: string | null;
+  openalex_id: string | null;
+  url: string | null;
+  year: number | null;
+  reason: string | null;
+}
+
+export interface Finding {
+  id: string;
+  kind: "unsupported_claim" | "missing_citation" | "uncited_claim";
+  severity: "high" | "medium" | "low";
+  block_id: string;
+  sentence_index: number;
+  start: number;
+  end: number;
+  sentence: string;
+  message: string;
+  evidence: Evidence[];
+  suggested_sources: SuggestedSource[];
+}
+
+export interface ReviewSummary {
+  sentences_examined: number;
+  claims_with_citations: number;
+  citations_checked: number;
+  references_without_abstract: number;
+  findings_total: number;
+  unsupported_claims: number;
+  missing_citations: number;
+}
+
+export interface ReviewResult {
+  paper_id: string;
+  reviewed_at: string;
+  model: string;
+  findings: Finding[];
+  summary: ReviewSummary;
 }
 
 export interface ApiError {
@@ -139,6 +237,20 @@ export async function extractPaper(paperId: string): Promise<ExtractionResult> {
   return request<ExtractionResult>(`/papers/${paperId}/extract`, { method: "POST" });
 }
 
+export async function reviewPaper(
+  paperId: string,
+  verified: boolean,
+): Promise<ReviewResult> {
+  const query = new URLSearchParams({
+    check_support: String(verified),
+    find_uncited_claims: "true",
+    find_missing_work: String(verified),
+  });
+  return request<ReviewResult>(`/papers/${paperId}/review?${query}`, {
+    method: "POST",
+  });
+}
+
 /*
  Notes
 
@@ -157,4 +269,10 @@ export async function extractPaper(paperId: string): Promise<ExtractionResult> {
  nodes here for the same reason they are nodes on the server: the marker text
  is never part of the prose, and the UI is what turns a CiteNode back into
  something a reader sees.
+
+ There is no client for POST /papers/{id}/resolve, though the endpoint exists.
+ Resolution runs as part of extraction, so the UI never calls it on its own.
+ The route stays on the server because the resolution module owns it and is
+ usable independently; adding a function here that nothing calls would not make
+ that any more true.
 */
