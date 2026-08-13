@@ -1,12 +1,23 @@
 from functools import lru_cache
 
 from app.core.config import get_settings
+from app.core.http_cache import HttpCache
 from app.core.storage_provider import StorageProvider
 
 
 @lru_cache
 def get_storage_provider() -> StorageProvider:
     return StorageProvider(papers_dir=get_settings().papers_dir)
+
+
+@lru_cache
+def get_http_cache() -> HttpCache:
+    settings = get_settings()
+    return HttpCache(
+        root=settings.http_cache_dir,
+        ttl_seconds=settings.http_cache_ttl_hours * 3600,
+        enabled=settings.http_cache_enabled,
+    )
 
 
 # Notes

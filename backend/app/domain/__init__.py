@@ -14,7 +14,19 @@ from app.domain.document import (
     XRefNode,
 )
 from app.domain.geometry import BBox
-from app.domain.library import Library, ParseQuality, RawReference
+from app.domain.library import (
+    ExternalIds,
+    Library,
+    MatchCandidate,
+    MatchScore,
+    ParseQuality,
+    Provenance,
+    RawReference,
+    Reference,
+    Resolution,
+    ResolutionStatus,
+    SourceRecord,
+)
 
 __all__ = [
     "BBox",
@@ -27,14 +39,22 @@ __all__ = [
     "CitationStyle",
     "CiteNode",
     "Document",
+    "ExternalIds",
     "FLOATS_SECTION_ID",
     "FRONT_MATTER_SECTION_ID",
     "Inline",
     "Library",
+    "MatchCandidate",
+    "MatchScore",
     "MathNode",
     "ParseQuality",
+    "Provenance",
     "RawReference",
+    "Reference",
+    "Resolution",
+    "ResolutionStatus",
     "Section",
+    "SourceRecord",
     "TextRun",
     "XRefNode",
 ]

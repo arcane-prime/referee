@@ -41,6 +41,16 @@ class ExtractionFailedError(RefereeError):
     code = "extraction_failed"
 
 
+class SearchUnavailableError(RefereeError):
+    status_code = 502
+    code = "search_unavailable"
+
+
+class NotExtractedError(RefereeError):
+    status_code = 409
+    code = "not_extracted"
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(RefereeError)
     async def handle_referee_error(_: Request, exc: RefereeError) -> JSONResponse:
@@ -67,3 +77,11 @@ def register_exception_handlers(app: FastAPI) -> None:
 # ExtractionFailedError is a 422 and means the opposite: the parser answered,
 # but its output could not be turned into a document. That is a property of the
 # uploaded file, so retrying the same PDF will not help.
+#
+# SearchUnavailableError mirrors ParserUnavailableError for the literature
+# databases: the failure is upstream, nothing was half-saved, and retrying is
+# reasonable.
+#
+# NotExtractedError is a 409 rather than a 404. The paper exists, but the
+# caller asked for something that requires a step they have not run yet, so the
+# fix is to call extract first rather than to correct the id.

@@ -1,0 +1,277 @@
+import pytest
+
+from app.domain.csl import CSLDate, CSLItem, CSLName
+from app.domain.library import ExternalIds, RawReference, SourceRecord
+from app.modules.resolution.provider.matcher_provider import (
+    AMBIGUOUS_THRESHOLD,
+    RESOLVED_THRESHOLD,
+    MatcherProvider,
+    author_similarity,
+    normalise_text,
+    title_similarity,
+    year_similarity,
+)
+from app.modules.resolution.provider.openalex_provider import (
+    reconstruct_abstract,
+    split_display_name,
+    strip_doi,
+    strip_openalex_id,
+)
+
+
+def reference(title=None, authors=(), year=None, raw="a printed reference string"):
+    parsed = None
+    if title or authors or year:
+        parsed = CSLItem(
+            id="ref_0",
+            title=title,
+            author=[CSLName(family=surname) for surname in authors],
+            issued=CSLDate.from_year(year),
+        )
+    return RawReference(id="ref_0", raw=raw, parsed=parsed)
+
+
+def record(title=None, authors=(), year=None, doi=None, abstract=None):
+    return SourceRecord(
+        csl=CSLItem(
+            id=doi or "openalex_w1",
+            title=title,
+            author=[CSLName(family=surname) for surname in authors],
+            issued=CSLDate.from_year(year),
+            DOI=doi,
+        ),
+        external_ids=ExternalIds(doi=doi, openalex="W1"),
+        abstract=abstract,
+        source_api="openalex",
+    )
+
+
+@pytest.fixture
+def matcher():
+    return MatcherProvider()
+
+
+class TestOpenAlexFieldShapes:
+    def test_doi_url_is_reduced_to_a_bare_doi(self):
+        assert strip_doi("https://doi.org/10.1162/NECO.1997.9.8.1735") == (
+            "10.1162/neco.1997.9.8.1735"
+        )
+
+    def test_openalex_id_url_is_reduced_to_an_id(self):
+        assert strip_openalex_id("https://openalex.org/W2064675550") == "W2064675550"
+
+    def test_inverted_index_is_rebuilt_in_word_order(self):
+        inverted = {"Learning": [0], "to": [1, 3], "store": [2], "information": [4]}
+
+        assert reconstruct_abstract(inverted) == "Learning to store to information"
+
+    def test_missing_abstract_index_yields_none(self):
+        assert reconstruct_abstract(None) is None
+        assert reconstruct_abstract({}) is None
+
+    def test_display_name_splits_on_the_last_token(self):
+        name = split_display_name("Sepp Hochreiter")
+
+        assert name.given == "Sepp"
+        assert name.family == "Hochreiter"
+
+    def test_single_token_name_is_kept_literal(self):
+        assert split_display_name("Plato").literal == "Plato"
+
+
+class TestSimilarity:
+    def test_normalisation_strips_case_accents_and_punctuation(self):
+        assert normalise_text("Jürgen's Long-Term Memory!") == "jurgen s long term memory"
+
+    def test_identical_titles_score_one(self):
+        assert title_similarity("Long short-term memory", "Long Short-Term Memory") == 1.0
+
+    def test_unrelated_titles_score_low(self):
+        assert title_similarity("Attention is all you need", "Sobolev spaces") < 0.3
+
+    def test_author_overlap_is_measured_against_our_authors_not_theirs(self):
+        ours = CSLItem(id="a", author=[CSLName(family="Vaswani")])
+        theirs = CSLItem(
+            id="b",
+            author=[CSLName(family="Vaswani"), CSLName(family="Shazeer")],
+        )
+
+        assert author_similarity(ours, theirs) == 1.0
+
+    def test_author_similarity_is_none_when_either_side_has_no_authors(self):
+        assert author_similarity(CSLItem(id="a"), CSLItem(id="b")) is None
+
+    def test_one_year_gap_is_treated_as_a_near_match(self):
+        preprint = CSLItem(id="a", issued=CSLDate.from_year(2016))
+        published = CSLItem(id="b", issued=CSLDate.from_year(2017))
+
+        assert year_similarity(preprint, published) == 0.85
+
+    def test_distant_years_score_zero(self):
+        assert year_similarity(
+            CSLItem(id="a", issued=CSLDate.from_year(1997)),
+            CSLItem(id="b", issued=CSLDate.from_year(2020)),
+        ) == 0.0
+
+
+class TestScoring:
+    def test_a_perfect_match_resolves(self, matcher):
+        ranked = matcher.rank(
+            reference("Long short-term memory", ["Hochreiter", "Schmidhuber"], 1997),
+            [record("Long Short-Term Memory", ["Hochreiter", "Schmidhuber"], 1997)],
+        )
+        status, best, _ = matcher.decide(ranked)
+
+        assert status == "resolved"
+        assert best.score.total >= RESOLVED_THRESHOLD
+
+    def test_preprint_year_gap_still_resolves(self, matcher):
+        ranked = matcher.rank(
+            reference("Layer normalization", ["Ba", "Kiros", "Hinton"], 2016),
+            [record("Layer Normalization", ["Ba", "Kiros", "Hinton"], 2017)],
+        )
+
+        assert matcher.decide(ranked)[0] == "resolved"
+
+    def test_matching_title_with_wrong_authors_and_year_does_not_resolve(self, matcher):
+        ranked = matcher.rank(
+            reference("Long short-term memory", ["Hochreiter"], 1997),
+            [record("Long short-term memory", ["Graves"], 2012)],
+        )
+        status, _, _ = matcher.decide(ranked)
+
+        assert status != "resolved"
+
+    def test_missing_signals_are_skipped_not_scored_as_zero(self, matcher):
+        with_authors = matcher.score(
+            reference("Attention is all you need", ["Vaswani"], 2017),
+            record("Attention is all you need", ["Vaswani"], 2017),
+        )
+        without_authors = matcher.score(
+            reference("Attention is all you need", (), 2017),
+            record("Attention is all you need", ["Vaswani"], 2017),
+        )
+
+        assert without_authors.authors is None
+        assert without_authors.total == pytest.approx(with_authors.total, abs=0.001)
+
+    def test_reference_with_no_parsed_title_is_scored_on_its_raw_string(self, matcher):
+        raw = "Jimmy Lei Ba, Jamie Ryan Kiros, and Geoffrey E Hinton. Layer normalization. 2016."
+        ranked = matcher.rank(
+            RawReference(id="ref_0", raw=raw, parsed=None),
+            [record("Layer normalization", ["Ba", "Kiros", "Hinton"], 2016)],
+        )
+
+        assert ranked[0].score.title > 0.3
+
+
+class TestDecision:
+    def test_no_candidates_is_unresolved_with_a_reason(self, matcher):
+        status, best, reason = matcher.decide([])
+
+        assert (status, best) == ("unresolved", None)
+        assert reason
+
+    def test_two_different_works_sharing_a_title_are_ambiguous_not_a_coin_flip(
+        self, matcher
+    ):
+        ranked = matcher.rank(
+            reference("Long short-term memory", [], None),
+            [
+                record("Long short-term memory", ["Hochreiter"], 1997, doi="10.1162/a"),
+                record("Long short-term memory", ["Graves"], 2012, doi="10.1007/b"),
+            ],
+        )
+        status, best, reason = matcher.decide(ranked)
+
+        assert status == "ambiguous"
+        assert best is not None
+        assert "close" in reason.lower()
+
+    def test_weak_best_candidate_is_unresolved(self, matcher):
+        ranked = matcher.rank(
+            reference("Attention is all you need", ["Vaswani"], 2017),
+            [record("Sobolev spaces", ["Adams"], 1975)],
+        )
+        status, best, _ = matcher.decide(ranked)
+
+        assert status == "unresolved"
+        assert best is None
+
+    def test_mid_confidence_is_ambiguous_and_keeps_the_candidate(self, matcher):
+        ranked = matcher.rank(
+            reference("Neural machine translation", ["Bahdanau"], 2014),
+            [record("Neural machine translation by jointly learning", ["Cho"], 2014)],
+        )
+        status, best, _ = matcher.decide(ranked)
+
+        if AMBIGUOUS_THRESHOLD <= ranked[0].score.total < RESOLVED_THRESHOLD:
+            assert status == "ambiguous"
+            assert best is not None
+
+
+# Notes
+#
+# Every test here runs with no network. SourceRecord is a domain object, so
+# candidates are hand-written, which is the whole point of having the search
+# backends return domain types rather than raw JSON.
+#
+# The field-shape tests exist because all three of those OpenAlex quirks are
+# silent failures rather than errors. An unstripped DOI URL never matches a DOI
+# parsed from a PDF, and an un-rebuilt inverted index is a dict where stage 3
+# expects prose.
+#
+# test_matching_title_with_wrong_authors_and_year_does_not_resolve and the
+# near-identical-candidates test are the two that protect against the failure
+# mode that actually matters here: confidently attaching the wrong paper. A
+# real search for "Long short-term memory" returns both the 1997 Hochreiter
+# paper and a 2012 Graves book chapter with the same title.
+#
+# The preprint test encodes the most common shape in this literature: arXiv one
+# year, conference the next. A scorer demanding an exact year rejects correct
+# matches constantly, so the one-year tolerance is asserted rather than left as
+# a constant nobody checks.
+
+
+class TestDuplicateCollapsing:
+    def test_a_preprint_and_its_published_version_are_one_candidate(self, matcher):
+        published = record(
+            "Learning Phrase Representations using RNN Encoder-Decoder",
+            ["Cho", "Bahdanau"], 2014, doi="10.3115/v1/d14-1179", abstract="An abstract.",
+        )
+        preprint = record(
+            "Learning Phrase Representations using RNN Encoder-Decoder",
+            ["Cho", "Bahdanau"], 2014, doi="10.48550/arxiv.1406.1078",
+        )
+        ranked = matcher.rank(
+            reference("Learning phrase representations using rnn encoder-decoder",
+                      ["Cho", "Bahdanau"], 2014),
+            [published, preprint],
+        )
+
+        assert len(ranked) == 1
+        assert matcher.decide(ranked)[0] == "resolved"
+
+    def test_the_published_version_with_an_abstract_survives(self, matcher):
+        published = record("Same Title Here", ["Cho"], 2014,
+                           doi="10.3115/v1/d14-1179", abstract="An abstract.")
+        preprint = record("Same Title Here", ["Cho"], 2014, doi="10.48550/arxiv.1406.1078")
+        ranked = matcher.rank(reference("Same title here", ["Cho"], 2014), [preprint, published])
+
+        assert ranked[0].record.external_ids.doi == "10.3115/v1/d14-1179"
+        assert ranked[0].record.abstract == "An abstract."
+
+    def test_genuinely_different_works_are_not_collapsed(self, matcher):
+        hochreiter = record("Long short-term memory", ["Hochreiter"], 1997, doi="10.1162/a")
+        graves = record("Long short-term memory", ["Graves"], 2012, doi="10.1007/b")
+        ranked = matcher.rank(reference("Long short-term memory", [], None), [hochreiter, graves])
+
+        assert len(ranked) == 2
+        assert matcher.decide(ranked)[0] == "ambiguous"
+
+    def test_records_sharing_a_doi_are_collapsed_whatever_the_title(self, matcher):
+        a = record("Attention Is All You Need", ["Vaswani"], 2017, doi="10.5555/x")
+        b = record("Attention is all you need (extended abstract)", ["Vaswani"], 2017, doi="10.5555/x")
+        ranked = matcher.rank(reference("Attention is all you need", ["Vaswani"], 2017), [a, b])
+
+        assert len(ranked) == 1

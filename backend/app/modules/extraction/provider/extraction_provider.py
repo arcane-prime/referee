@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 
+from app.core.exceptions import NotExtractedError
 from app.core.storage_provider import StorageProvider
 from app.domain.document import Document
 from app.domain.library import RawReference
@@ -56,6 +57,20 @@ class ExtractionProvider:
             summary=self._summarise(document, references),
         )
 
+    def load_references(self, paper_id: str) -> list[RawReference]:
+        tei_xml = self._storage.read_tei(paper_id)
+        if tei_xml is None:
+            raise NotExtractedError(
+                f"Paper '{paper_id}' has not been extracted yet. Run extract first."
+            )
+
+        _, references = self._tei.parse(
+            tei_xml=tei_xml,
+            paper_id=paper_id,
+            document_id=f"{paper_id}_rev0",
+        )
+        return references
+
     def _summarise(
         self,
         document: Document,
@@ -99,3 +114,13 @@ class ExtractionProvider:
 # The revision is written as rev_0 because extraction produces revision zero of
 # the paper. Later edits append rev_1, rev_2 and so on, and nothing ever
 # rewrites an earlier file.
+#
+# load_references exists because references are deliberately not persisted yet,
+# while resolution needs them. Re-deriving them from the stored TEI takes
+# milliseconds and cannot drift from what extraction would produce, since it is
+# the same parser over the same bytes.
+#
+# It is separate from extract() rather than a flag on it because it must have
+# no side effects: it does not call the parser, does not rewrite grobid.tei.xml
+# and does not overwrite rev_0.json. Resolving a paper should not silently
+# mutate the extraction it was resolving.

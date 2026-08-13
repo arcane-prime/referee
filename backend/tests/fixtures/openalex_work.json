@@ -1,0 +1,45 @@
+{
+  "id": "https://openalex.org/W2064675550",
+  "doi": "https://doi.org/10.1162/neco.1997.9.8.1735",
+  "display_name": "Long Short-Term Memory",
+  "publication_year": 1997,
+  "type": "article",
+  "authorships": [
+    {
+      "author": { "id": "https://openalex.org/A5000", "display_name": "Sepp Hochreiter" },
+      "raw_author_name": "Sepp Hochreiter"
+    },
+    {
+      "author": { "id": "https://openalex.org/A5001", "display_name": "Jürgen Schmidhuber" },
+      "raw_author_name": "Jürgen Schmidhuber"
+    }
+  ],
+  "primary_location": {
+    "source": {
+      "id": "https://openalex.org/S1234",
+      "display_name": "Neural Computation",
+      "type": "journal"
+    }
+  },
+  "biblio": {
+    "volume": "9",
+    "issue": "8",
+    "first_page": "1735",
+    "last_page": "1780"
+  },
+  "abstract_inverted_index": {
+    "Learning": [0],
+    "to": [1, 9],
+    "store": [2],
+    "information": [3],
+    "over": [4],
+    "extended": [5],
+    "time": [6],
+    "intervals": [7],
+    "takes": [8],
+    "a": [10],
+    "very": [11],
+    "long": [12],
+    "time.": [13]
+  }
+}
