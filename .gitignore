@@ -1,0 +1,75 @@
+# ---------------------------------------------------------------- Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+.venv/
+venv/
+env/
+
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+
+# ---------------------------------------------------------------- Node
+node_modules/
+.next/
+out/
+build/
+dist/
+.turbo/
+.vercel/
+
+*.tsbuildinfo
+next-env.d.ts
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ---------------------------------------------------------------- Secrets
+# Only real env files. The *.example templates are committed on purpose.
+.env
+.env.local
+.env.*.local
+
+# ---------------------------------------------------------------- Runtime data
+# Uploaded PDFs, GROBID output and parsed revisions. Regenerated per upload,
+# and it is other people's manuscripts.
+backend/data/
+
+# Test PDFs pulled from arXiv. Re-downloadable; see HANDOFF.md for the URLs.
+backend/samples/
+
+# ---------------------------------------------------------------- Tooling
+.claude/
+
+# ---------------------------------------------------------------- Editors / OS
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+.DS_Store
+Thumbs.db
+desktop.ini
+
+
+# Deliberately NOT ignored:
+#
+#   backend/tests/fixtures/*.tei.xml
+#     Real GROBID output, committed on purpose. It is what lets the parser
+#     suite run in under a second with no Docker and no network. Treat it as
+#     source, not as generated data.
+#
+#   backend/.env.example, frontend/.env.local.example
+#     Templates showing which variables exist. No secrets in them.
+#
+#   frontend/AGENTS.md, frontend/CLAUDE.md
+#     Written and re-added automatically by `next dev`. Next's own guidance is
+#     to commit them: ignoring them just means they reappear as untracked
+#     noise on every run.

@@ -1,0 +1,20 @@
+from functools import lru_cache
+
+from app.core.config import get_settings
+from app.core.storage_provider import StorageProvider
+
+
+@lru_cache
+def get_storage_provider() -> StorageProvider:
+    return StorageProvider(papers_dir=get_settings().papers_dir)
+
+
+# Notes
+#
+# Storage is shared infrastructure, so it is constructed once here rather than
+# rebuilt inside each module's wiring. Two modules building their own instance
+# would work, but the on-disk layout would then be defined in two places.
+#
+# The cache takes no arguments because Settings is a Pydantic model and so not
+# hashable. get_settings() is already cached, so resolving it inside yields the
+# same single instance.

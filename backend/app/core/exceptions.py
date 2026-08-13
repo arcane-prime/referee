@@ -1,0 +1,69 @@
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+
+
+class RefereeError(Exception):
+    status_code: int = 500
+    code: str = "internal_error"
+
+    def __init__(self, detail: str) -> None:
+        super().__init__(detail)
+        self.detail = detail
+
+
+class InvalidUploadError(RefereeError):
+    status_code = 400
+    code = "invalid_upload"
+
+
+class UploadTooLargeError(RefereeError):
+    status_code = 413
+    code = "upload_too_large"
+
+
+class PaperNotFoundError(RefereeError):
+    status_code = 404
+    code = "paper_not_found"
+
+
+class StorageError(RefereeError):
+    status_code = 500
+    code = "storage_error"
+
+
+class ParserUnavailableError(RefereeError):
+    status_code = 502
+    code = "parser_unavailable"
+
+
+class ExtractionFailedError(RefereeError):
+    status_code = 422
+    code = "extraction_failed"
+
+
+def register_exception_handlers(app: FastAPI) -> None:
+    @app.exception_handler(RefereeError)
+    async def handle_referee_error(_: Request, exc: RefereeError) -> JSONResponse:
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"code": exc.code, "detail": exc.detail},
+        )
+
+
+# Notes
+#
+# Providers raise these domain errors and never import FastAPI. The single
+# handler registered here is the only place that knows how a domain failure
+# becomes an HTTP response, which keeps the logic layer framework-free and
+# directly unit-testable.
+#
+# The response shape is {code, detail}. `code` is stable and meant to be
+# switched on by the frontend; `detail` is human-readable and may change.
+#
+# ParserUnavailableError is a 502 rather than a 500 because the failure is in
+# an upstream service we depend on, not in this application. The distinction
+# matters to the caller: retrying is reasonable, and nothing was half-saved.
+#
+# ExtractionFailedError is a 422 and means the opposite: the parser answered,
+# but its output could not be turned into a document. That is a property of the
+# uploaded file, so retrying the same PDF will not help.
