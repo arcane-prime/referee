@@ -415,14 +415,6 @@ code {
 .tag--missing_citation { background: #eaf0fb; color: #29508f; }
 
 /* -------------------------------------------------------------- review */
-.check {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0.75rem 0;
-  font-size: 0.875rem;
-  color: var(--muted);
-}
 
 .finding { border-left: 3px solid var(--border); }
 .finding--high { border-left-color: var(--danger); }
@@ -523,8 +515,400 @@ code {
 .tag--uncited_claim { background: #f0efec; color: #5c5b57; }
 .finding--low { border-left-color: var(--border); }
 
-.check__note {
-  margin-left: 0.35rem;
-  font-size: 0.75rem;
+/* -------------------------------------------------------------- agent tabs */
+
+.agent {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.tabs__tab {
+  padding: 0.5rem 0.9rem;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.tabs__tab:hover {
+  color: var(--text);
+}
+
+.tabs__tab--active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  font-weight: 500;
+}
+
+.agent__body {
+  display: flex;
+  flex-direction: column;
+}
+
+/* -------------------------------------------------------------- editing */
+
+.panel__heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.panel--control .control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.control__file {
+  min-width: 0;
+}
+
+.control__file .panel__title {
+  margin-bottom: 0.15rem;
+}
+
+.revision {
+  flex: 0 0 auto;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 0.15rem 0.45rem;
+  border-radius: 0.3rem;
+  background: #f0efec;
   color: var(--muted);
 }
+
+.revision--edited {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.command {
+  width: 100%;
+  margin: 0.75rem 0 0.6rem;
+  padding: 0.6rem 0.7rem;
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  resize: vertical;
+}
+
+.command:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.command__row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.75rem;
+}
+
+.examples__item {
+  padding: 0.25rem 0.55rem;
+  font: inherit;
+  font-size: 0.78rem;
+  color: var(--muted);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  cursor: pointer;
+}
+
+.examples__item:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.hint--warn {
+  color: var(--warn);
+}
+
+.patch {
+  border-left: 3px solid var(--border);
+}
+
+.patch--approved {
+  border-left-color: var(--accent);
+}
+
+.patch__head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.6rem;
+}
+
+.patch__approve {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.patch--approved .patch__approve {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.patch__anchor {
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-left: auto;
+}
+
+.patch__side {
+  padding: 0.5rem 0.65rem;
+  border-radius: 0.4rem;
+  margin-bottom: 0.4rem;
+}
+
+.patch__side--before {
+  background: #fbf1f0;
+}
+
+.patch__side--after {
+  background: #eff6f2;
+}
+
+.patch__label {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.2rem;
+}
+
+.patch__text {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.65;
+}
+
+.patch__text--deleted {
+  color: var(--danger);
+  font-style: italic;
+}
+
+.citations {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin: 0.5rem 0 0;
+  font-size: 0.78rem;
+}
+
+.citations--intact {
+  color: var(--accent);
+}
+
+.citations__added { color: var(--accent); }
+.citations__removed { color: var(--danger); font-weight: 600; }
+.citations__moved { color: var(--warn); }
+
+.tag--refused {
+  background: #fbe9e7;
+  color: var(--danger);
+}
+
+.approve {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.panel--ok {
+  border-left: 3px solid var(--accent);
+  background: var(--accent-soft);
+}
+
+.panel--targeted {
+  border-left: 3px solid var(--warn);
+  background: var(--warn-soft);
+}
+
+.block--targeted {
+  background: var(--warn-soft);
+  box-shadow: -0.6rem 0 0 var(--warn-soft), 0.6rem 0 0 var(--warn-soft);
+  border-radius: 0.15rem;
+}
+
+/* -------------------------------------------------------------- split view */
+
+.page--split {
+  max-width: 100rem;
+  height: 100vh;
+  height: 100dvh;
+  padding: 1.5rem 1.5rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  overflow: hidden;
+}
+
+.page__bar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.page--split .page__header p {
+  margin-bottom: 1rem;
+}
+
+.page__top {
+  flex: 0 0 auto;
+}
+
+.split {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+}
+
+.split__pane {
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.split__pane--left {
+  flex: 0 0 var(--split-left, 62%);
+  padding-right: 0.5rem;
+}
+
+.split__pane--right {
+  flex: 1 1 0;
+  padding-left: 0.5rem;
+}
+
+.split__divider {
+  flex: 0 0 0.75rem;
+  position: relative;
+  cursor: col-resize;
+  border: none;
+  background: none;
+  touch-action: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.split__grip {
+  width: 1px;
+  height: 100%;
+  background: var(--border);
+  transition: background 0.15s ease, width 0.15s ease;
+}
+
+.split__divider:hover .split__grip,
+.split__divider:focus-visible .split__grip,
+.split--dragging .split__grip {
+  width: 3px;
+  background: var(--accent);
+}
+
+.split__divider:focus-visible {
+  outline: none;
+}
+
+.split--dragging {
+  user-select: none;
+  cursor: col-resize;
+}
+
+@media (max-width: 64rem) {
+  .page--split {
+    height: auto;
+    max-width: 52rem;
+    padding: 2rem 1.5rem 4rem;
+    overflow: visible;
+  }
+
+  .split {
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .split__pane--left,
+  .split__pane--right {
+    flex: 0 0 auto;
+    height: auto;
+    overflow-y: visible;
+    padding: 0;
+  }
+
+  .split__divider {
+    display: none;
+  }
+}
+
+/* Notes
+ *
+ * The page has two layouts. Before a parse exists it is a narrow reading
+ * column; once one does, .page--split widens it and pins it to the viewport
+ * height so the panes scroll rather than the document. That is the whole
+ * purpose of the split, and it only works if the page itself cannot scroll.
+ *
+ * The left pane's width comes from --split-left, which SplitPane sets on the
+ * container while dragging. Keeping it in a custom property rather than an
+ * inline flex-basis is what lets the media query below take the layout apart
+ * without !important.
+ *
+ * Nothing sits below the split and the page has no bottom padding, so both
+ * panes run to the bottom edge of the window. Any element under them would
+ * cost that height on every screen, and a gap under a scrolling pane reads as
+ * the content having ended when it has not.
+ *
+ * The panes carry min-height: 0 as well as height: 100%. Without it a flex
+ * child refuses to shrink below its content size, the pane grows to fit
+ * everything instead of scrolling, and the overflow rule silently does
+ * nothing. overflow: hidden on .page--split is the backstop that keeps a
+ * mistake there from turning into a second scrollbar on the window.
+ *
+ * Below 64rem there is no room for two readable columns, so the panes stack,
+ * the pinned height is released and the divider is hidden. A drag handle that
+ * cannot move is worse than no handle.
+ *
+ * overscroll-behavior: contain stops a scroll that reaches the end of one pane
+ * from continuing into the page behind it, which otherwise reads as the whole
+ * layout lurching while you are reading a finding.
+ *
+ * touch-action: none on the divider is what makes a touch drag resize the
+ * panes instead of scrolling the page.
+ */

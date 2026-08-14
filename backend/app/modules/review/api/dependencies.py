@@ -26,6 +26,7 @@ def get_llm_backend() -> LlmBackend:
         model=settings.review_model,
         timeout_seconds=settings.review_timeout_seconds,
         cache=get_http_cache(),
+        reasoning_effort=settings.reasoning_effort,
     )
 
 

@@ -22,6 +22,7 @@ class CerebrasProvider:
         max_attempts: int = 5,
         temperature: float = 0.0,
         cache: HttpCache | None = None,
+        reasoning_effort: str = "low",
     ) -> None:
         self._base_url = base_url.rstrip("/")
         self._api_key = api_key
@@ -30,6 +31,7 @@ class CerebrasProvider:
         self._max_attempts = max_attempts
         self._temperature = temperature
         self._cache = cache
+        self._reasoning_effort = reasoning_effort
 
     async def complete_json(
         self,
@@ -43,6 +45,7 @@ class CerebrasProvider:
             "model": self._model,
             "temperature": self._temperature,
             "max_completion_tokens": max_tokens,
+            "reasoning_effort": self._reasoning_effort,
             "messages": [
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},
@@ -117,7 +120,7 @@ class CerebrasProvider:
 
             try:
                 data = response.json()
-                return data["choices"][0]["message"]["content"]
+                content = self._content_of(data)
             except (ValueError, KeyError, IndexError) as exc:
                 last_error = exc
                 if attempt == self._max_attempts:
@@ -125,7 +128,37 @@ class CerebrasProvider:
                 await asyncio.sleep(2 ** (attempt - 1))
                 continue
 
+            if content:
+                return content
+
+            last_error = ValueError(
+                "the model returned a message with no content, only reasoning"
+            )
+            if attempt == self._max_attempts:
+                break
+            await asyncio.sleep(2 ** (attempt - 1))
+            continue
+
         raise ReviewUnavailableError(f"Could not reach the review model: {last_error}")
+
+    @staticmethod
+    def _content_of(data: dict) -> str:
+        message = data["choices"][0]["message"]
+
+        content = message.get("content")
+        if isinstance(content, str) and content.strip():
+            return content
+
+        if isinstance(content, list):
+            joined = "".join(
+                part.get("text", "")
+                for part in content
+                if isinstance(part, dict)
+            )
+            if joined.strip():
+                return joined
+
+        return ""
 
     @staticmethod
     def _parse(content: str) -> dict:
@@ -168,3 +201,16 @@ class CerebrasProvider:
 # with constrained decoding, a truncated response caused by hitting the token
 # limit can arrive as unparseable text, and that must surface as an error
 # rather than as an empty finding list that looks like a clean review.
+#
+# _content_of exists because a reasoning model does not always put its answer
+# where a chat model does. gpt-oss-120b intermittently returns a message whose
+# `content` is absent, null or empty while the reasoning field is populated,
+# and it can also return content as a list of parts rather than a string.
+# Reading data["choices"][0]["message"]["content"] directly raised KeyError on
+# roughly one call in ten, which surfaced to the user as the misleading "could
+# not reach the review model" when the model had in fact answered.
+#
+# An empty content is retried rather than raised immediately, because the cause
+# is sampling rather than configuration: the same request usually succeeds on
+# the next attempt. Only after every attempt has produced nothing does it
+# become an error, and the message then says what actually happened.

@@ -16,10 +16,30 @@ Stage 1 is complete and verified against a real paper.
 |---|---|
 | 1a. Upload | Done, verified through the browser |
 | 1b. Extract | **Done, verified on a real arXiv PDF via local GROBID** |
-| 2. Resolve | Not started |
-| 3. Review | Not started |
-| 4. Edit | Not started |
-| 5. Export | Not started |
+| 2. Resolve | **Done** — OpenAlex primary, Semantic Scholar fallback, disk cache |
+| 3. Review | **Done** — quote-before-grade, quotes verified in code |
+| 4. Edit | **Done and verified end to end on a real paper** |
+| 5. Export | Not started — the last code gap |
+
+156 tests pass in under two seconds with no network, no API key and no Docker.
+`ruff check` is clean, `tsc --noEmit` is clean, `next build` succeeds.
+
+### Stage 4 verified live, on paper_1565d341a0ae
+
+```
+BEFORE  rev 0 | citations: 62
+PLAN    1 change(s) ready for review. | patches: 1 | refused: 0
+APPLY   Applied 1 change(s) as revision 1. Revision 0 is unchanged on disk.
+AFTER   rev 1 | available: [0, 1]
+
+CITATIONS IDENTICAL: True (62 -> 62)
+s0.p0: 724 -> 414 chars
+  cites before: [[ref_17,ref_33], [ref_15,ref_29], [ref_13], [ref_16,ref_12], [ref_36,ref_37]]
+  cites after : [[ref_17,ref_33], [ref_15,ref_29], [ref_13], [ref_16,ref_12], [ref_36,ref_37]]
+```
+
+The paragraph lost 43% of its prose and all five citations survived with their
+groupings intact. See `EDITING_PLAN.md` for the design this implements.
 
 ### Verified against arXiv 1706.03762 ("Attention Is All You Need")
 
@@ -161,21 +181,48 @@ would be a reasonable small improvement.
 
 ## 5. Resume here
 
-1. **Second fixture, author-year style.** Only numbered style has been proven
-   on real output. The brief requires handling more than one citation style, so
-   run an APA/ACL paper (e.g. BERT, arXiv 1810.04805) through and commit its TEI
-   as `tests/fixtures/author_year.tei.xml`, then parametrise the document tests
-   over both.
-2. **Stage 2, Resolve.** New module `modules/resolve/` with the same
-   `api`/`provider`/`dto` shape. OpenAlex only (it carries Crossref metadata and
-   has direct DOI lookup, so a second client buys little). Needs a keyed disk
-   cache from day one — the same paper gets parsed dozens of times in
-   development, and unkeyed public APIs throttle hard.
-3. **`GET /papers/{id}`** so a stored parse can be read back without re-running
-   extraction.
-4. **`docker-compose.yml`** — must include the `JAVA_TOOL_OPTIONS` workaround
-   above, or a fresh clone will hit the same crash.
-5. Header cleanup for the artifacts in section 4.
+**The code is done. What is missing is what the brief actually asks you to
+send.** Four of its five submission artifacts do not exist, and the one it says
+it weighs most heavily is among them. Do not start a new feature.
+
+Roughly seven hours of work, in this order:
+
+1. **`README.md`** (~30 min). How to run it. If a grader cannot start the app,
+   nothing else gets marked. Cover: Python venv, `pip install -r
+   requirements.txt`, GROBID via Docker (section 2) or the public fallback,
+   `CEREBRAS_API_KEY` optional, `npm install && npm run dev`, and that the tests
+   need none of it.
+2. **`docs/01-citation-parsing.md`** (~75 min). The brief asks for the pipeline
+   steps, the intermediate representation, where CSL-JSON fits, and how styles
+   and failures are handled. Weighted highest.
+3. **`docs/02-agent.md`** (~75 min). How a command becomes actions, how
+   operations are planned and run, how OpenAlex and Semantic Scholar are called,
+   and how citations survive an edit. Weighted highest.
+4. **AI-use note and limitations** (~30 min). Explicitly requested. Section 10
+   below plus `EDITING_PLAN.md` §14 are most of the raw material.
+5. **Export** (~90 min). The last code gap, and the one explicit brief
+   requirement not met: render through `citeproc-py` from a real `.csl` file and
+   emit LaTeX plus a bibliography. If the clock beats you, cut this and name it
+   as a limitation — a missing export is survivable, a missing design doc is not.
+6. **Screen recording** (~45 min). Goes last because it needs everything
+   working. Upload, extract, review, edit, approve.
+
+**The docs are largely already written.** Every source file ends with a notes
+block explaining why it is the way it is. `document.py` on citations as nodes,
+`inline_provider.py` on delimiter absorption, `matcher_provider.py` on
+thresholds, `placeholder_provider.py` on deflate and inflate,
+`invariant_provider.py` on the two independent guards. Writing the design docs
+is mostly assembling and sequencing that, not thinking it out again.
+
+Deferred deliberately, all fine to leave undone:
+
+- Author-year fixture. Style detection works, but only numbered style is proven
+  against real GROBID output.
+- Cerebras pacing. The free tier allows 5 requests a minute and there is no
+  client-side token bucket, so a command touching many blocks crawls.
+- Resolution query ladder. Retrying a failed lookup with the title truncated at
+  the last comma would rescue roughly two references in thirty-eight. Measured,
+  not guessed — see the Ern and Guermond case.
 
 ---
 
@@ -390,13 +437,46 @@ names like `Łukasz`.
 
 ## 10. Known gaps
 
+Raw material for the limitations section of the submission.
+
+**Deliverables**
+
+- `README.md` and both `docs/` writeups do not exist. Highest priority.
+- No screen recording yet.
+- Export does not exist, so the CSL requirement is half met: CSL-JSON is the
+  canonical model throughout, but nothing renders through citeproc. The note at
+  the bottom of `domain/csl.py` claiming otherwise is aspirational until then.
+
+**Parsing**
+
 - Only numbered style proven on real output. Author-year fixture still needed.
 - Header artifacts listed in section 4.
-- Footnotes not captured (deliberate; must appear in the limitations section).
-- `GET /papers/{id}` does not exist — a parse can only be obtained by re-running
-  extract.
-- No `docker-compose.yml` yet, and it must carry the JVM workaround.
-- Nothing persists to SQLite; storage is the filesystem only. Fine for the
-  stated scope of one user on one machine.
-- Block-level coordinates are sparse (21/92) even though inline nodes all have
-  them. Not investigated; nothing depends on it.
+- Footnotes not captured, deliberately.
+- Reference parsing degrades badly on mathematics papers. On the Green's
+  function paper, 6 of 38 references failed to resolve: two had the journal name
+  glued into the title by GROBID, one had no title at all, and three parsed
+  perfectly but are genuinely absent from OpenAlex (a 1967 Soviet journal, a
+  2026 paper not yet indexed, a poorly indexed 2009 one). Verified individually,
+  not assumed.
+
+**Runtime**
+
+- GROBID is OOM-killed by Docker on this machine. 7.8 GB of system RAM, WSL2
+  takes half, GROBID idles at 2.4 GB of that. `docker start grobid` brings it
+  back in about 40 seconds. Commenting out `GROBID_URL` in `backend/.env` falls
+  back to the public instance and frees the memory.
+- Cerebras free tier is 5 requests per minute. Review and editing share it and
+  there is no client-side pacing, so large commands are slow and can fail.
+- Papers extracted before `library.json` existed have no library, so the agent
+  may not add citations to them. It can still shorten and rewrite, and the UI
+  says so.
+
+**Structural, all deliberate**
+
+- No `docker-compose.yml`, and it must carry the JVM workaround.
+- Storage is the filesystem, no database. Correct for one user on one machine.
+- Block-level coordinates are sparse (21/92) though inline nodes all have them.
+  Never investigated; nothing depends on it.
+- An edit operates on one block. No merging or splitting of paragraphs.
+- A citation is guaranteed to survive and stay in its block, but after a heavy
+  rewrite it may not sit beside the exact clause a human would have chosen.

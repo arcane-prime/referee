@@ -1,24 +1,65 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import AgentPanel from "@/components/AgentPanel";
+import DocumentPanel from "@/components/DocumentPanel";
 import ExtractionPanel from "@/components/ExtractionPanel";
 import PdfUploader from "@/components/PdfUploader";
-import ReviewPanel from "@/components/ReviewPanel";
-import { ExtractionResult, UploadedPaper } from "@/lib/api";
+import SplitPane from "@/components/SplitPane";
+import {
+  CurrentDocument,
+  ExtractionResult,
+  UploadedPaper,
+  getDocument,
+} from "@/lib/api";
 
 export default function HomePage() {
   const [paper, setPaper] = useState<UploadedPaper | null>(null);
   const [extraction, setExtraction] = useState<ExtractionResult | null>(null);
+  const [current, setCurrent] = useState<CurrentDocument | null>(null);
+  const [targeted, setTargeted] = useState<string[]>([]);
 
   const reset = useCallback(() => {
     setPaper(null);
     setExtraction(null);
+    setCurrent(null);
+    setTargeted([]);
   }, []);
 
   const onUploaded = useCallback((uploaded: UploadedPaper) => {
     setExtraction(null);
+    setCurrent(null);
+    setTargeted([]);
     setPaper(uploaded);
   }, []);
+
+  const onExtracted = useCallback(
+    (result: ExtractionResult | null) => {
+      setExtraction(result);
+      setTargeted([]);
+      setCurrent(
+        result === null
+          ? null
+          : {
+              paper_id: result.paper_id,
+              revision: result.document.revision,
+              available_revisions: [result.document.revision],
+              document: result.document,
+            },
+      );
+    },
+    [],
+  );
+
+  const refresh = useCallback(async () => {
+    if (!paper) return;
+    setTargeted([]);
+    try {
+      setCurrent(await getDocument(paper.paper_id));
+    } catch {
+      setCurrent(null);
+    }
+  }, [paper]);
 
   if (!paper) {
     return (
@@ -29,22 +70,46 @@ export default function HomePage() {
     );
   }
 
+  const ready = extraction !== null && current !== null;
+
   return (
-    <main className="page">
-      <Header />
+    <main className={`page${ready ? " page--split" : ""}`}>
+      <div className="page__top">
+        <div className="page__bar">
+          <Header />
+          <button className="button button--quiet" onClick={reset}>
+            Upload a different paper
+          </button>
+        </div>
+        <ExtractionPanel
+          paper={paper}
+          extracted={ready}
+          onExtracted={onExtracted}
+        />
+      </div>
 
-      <ExtractionPanel paper={paper} onExtracted={setExtraction} />
-
-      {extraction && (
-        <ReviewPanel
-          paperId={paper.paper_id}
-          verified={extraction.verification.succeeded}
+      {ready && (
+        <SplitPane
+          leftLabel="The manuscript"
+          rightLabel="Review and edit"
+          left={
+            <DocumentPanel
+              extraction={extraction}
+              current={current}
+              targetedBlocks={targeted}
+            />
+          }
+          right={
+            <AgentPanel
+              paperId={paper.paper_id}
+              revision={current.revision}
+              verified={extraction.verification.succeeded}
+              onProposal={setTargeted}
+              onApplied={() => void refresh()}
+            />
+          }
         />
       )}
-
-      <button className="button button--quiet" onClick={reset}>
-        Upload a different paper
-      </button>
     </main>
   );
 }
@@ -61,26 +126,32 @@ function Header() {
 /*
  Notes
 
- Two user actions, matching the brief's journey: see the parse, then request a
- review. Checking references against the literature databases happens as part
- of producing the parse rather than as a step the user triggers, because there
- is no decision being offered there. A researcher always wants their references
- checked, and a control with only one sensible answer should not exist.
+ The journey the brief describes, in one screen: upload, see the parse, read
+ the review, instruct an edit, approve it. Only the upload is a separate
+ screen, because until a file exists there is nothing to show beside it.
 
- When the databases are unreachable the parse still succeeds and says so, and
- the review panel adjusts what it offers to match. What the review can do is
- derived from whether verification worked, rather than asked of a user who has
- no way to know the right answer.
+ Two pieces of state that look similar are deliberately separate. `extraction`
+ is a fact about the parse and never changes after it is produced; `current` is
+ the manuscript, which every approved edit replaces. Merging them would mean
+ re-running extraction to see the result of an edit, and that would call GROBID
+ and the literature databases to rebuild a document already on disk.
 
- Starting a new extraction clears the previous result before the request goes
- out, so the review panel cannot sit under a parse that is being replaced. An
- earlier request completing late would otherwise repopulate it with findings
- belonging to a different paper.
+ After an edit is applied the page re-reads the document rather than patching
+ its own copy from the response. The server has just written a revision, and
+ rebuilding the client's idea of the paper from anything other than that file
+ is how the two come to disagree.
 
- The review panel appears only once a parse exists, which is a real dependency
- rather than a cosmetic one: there is nothing to review until the document has
- been extracted.
+ `targeted` flows up from the edit panel and down into the manuscript, so the
+ blocks a pending proposal would change are highlighted in the paper itself.
+ The researcher sees which of their paragraphs an instruction selected before
+ approving anything, which is the cheapest check on a planner that chose badly.
 
- The upload control is the homepage rather than a landing page behind a call to
- action. A researcher arriving here should be one drop away from working.
+ The layout changes shape once a parse exists: a narrow reading column before,
+ two independently scrolling panes after. Stacked, every comparison between a
+ finding and the sentence it refers to costs a long scroll.
+
+ Starting a new extraction clears the parse before the request goes out, so the
+ agent pane cannot sit beside a manuscript that is being replaced. A request
+ completing late would otherwise repopulate it with findings belonging to a
+ different paper.
 */

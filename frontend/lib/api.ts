@@ -193,6 +193,73 @@ export interface ReviewResult {
   summary: ReviewSummary;
 }
 
+export type OperationKind =
+  | "shorten_block"
+  | "rewrite_block"
+  | "add_citation"
+  | "delete_block";
+
+export interface CitationDelta {
+  added: string[];
+  removed: string[];
+  moved: string[];
+}
+
+export interface BlockPatch {
+  block_id: string;
+  operation: OperationKind;
+  before: Inline[];
+  after: Inline[];
+  before_text: string;
+  after_text: string;
+  citations: CitationDelta;
+  deleted: boolean;
+}
+
+export interface RejectedOperation {
+  block_id: string;
+  operation: OperationKind;
+  reason: string;
+}
+
+export interface RevisionProposal {
+  paper_id: string;
+  base_revision: number;
+  command: string;
+  intent: string;
+  patches: BlockPatch[];
+  rejected: RejectedOperation[];
+  citations: CitationDelta;
+  note: string | null;
+}
+
+export interface ProposalResult {
+  proposal: RevisionProposal;
+  applicable: boolean;
+  message: string | null;
+}
+
+export interface AppliedRevision {
+  paper_id: string;
+  revision: number;
+  base_revision: number;
+  command: string;
+  applied_blocks: string[];
+  citations: CitationDelta;
+}
+
+export interface AppliedResult {
+  applied: AppliedRevision;
+  message: string;
+}
+
+export interface CurrentDocument {
+  paper_id: string;
+  revision: number;
+  available_revisions: number[];
+  document: ExtractedDocument;
+}
+
 export interface ApiError {
   code: string;
   detail: string;
@@ -251,6 +318,39 @@ export async function reviewPaper(
   });
 }
 
+export async function planEdit(
+  paperId: string,
+  command: string,
+): Promise<ProposalResult> {
+  return request<ProposalResult>(`/papers/${paperId}/edit/plan`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ command }),
+  });
+}
+
+export async function applyEdit(
+  paperId: string,
+  proposal: RevisionProposal,
+  approved: string[],
+): Promise<AppliedResult> {
+  return request<AppliedResult>(`/papers/${paperId}/edit/apply`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ proposal, approved }),
+  });
+}
+
+export async function getDocument(
+  paperId: string,
+  revision?: number,
+): Promise<CurrentDocument> {
+  const query = revision === undefined ? "" : `?revision=${revision}`;
+  return request<CurrentDocument>(`/papers/${paperId}/document${query}`, {
+    method: "GET",
+  });
+}
+
 /*
  Notes
 
@@ -275,4 +375,21 @@ export async function reviewPaper(
  The route stays on the server because the resolution module owns it and is
  usable independently; adding a function here that nothing calls would not make
  that any more true.
+
+ planEdit and applyEdit are two calls because approval is a real step. planEdit
+ writes nothing on the server; it returns what would happen. The proposal is
+ then sent back verbatim to applyEdit, which re-verifies it against the
+ document on disk rather than trusting what came from the browser. That is why
+ the whole proposal travels rather than an id: the server holds no session
+ state, and a proposal cannot expire because a process restarted.
+
+ `approved` carries block ids, so a researcher can accept two changes and drop
+ the third. The server treats an absent list as "all of them", but this client
+ always sends an explicit list, because in a UI with checkboxes the difference
+ between "everything" and "everything that happens to be ticked" is a bug
+ waiting to be found by a user who unticked one.
+
+ getDocument exists so the paper can be re-read after an edit without re-running
+ extraction. Re-extracting would call GROBID and the literature databases again
+ to rebuild a document that is already on disk.
 */

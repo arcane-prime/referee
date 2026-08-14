@@ -3,7 +3,9 @@ import asyncio
 from fastapi import APIRouter, Depends, Query, status
 
 from app.core.config import get_settings
+from app.core.dependencies import get_library_provider
 from app.core.exceptions import SearchUnavailableError
+from app.core.library_provider import LibraryProvider
 from app.domain.library import Reference
 from app.modules.extraction.api.dependencies import (
     get_extraction_provider,
@@ -40,6 +42,7 @@ async def extract_paper(
     extraction: ExtractionProvider = Depends(get_extraction_provider),
     resolution: ResolutionProvider = Depends(get_resolution_provider),
     search: SearchBackend = Depends(get_search_backend),
+    library: LibraryProvider = Depends(get_library_provider),
 ) -> ExtractionResultDto:
     result = await extraction.extract(paper_id=paper_id, use_cached_tei=use_cached_tei)
 
@@ -49,11 +52,14 @@ async def extract_paper(
         raw_references=extraction.load_references(paper_id),
     )
 
-    if references is not None:
-        return result.model_copy(
-            update={"references": references, "verification": verification}
-        )
-    return result.model_copy(update={"verification": verification})
+    if references is None:
+        library.merge(paper_id, result.references)
+        return result.model_copy(update={"verification": verification})
+
+    library.merge(paper_id, references)
+    return result.model_copy(
+        update={"references": references, "verification": verification}
+    )
 
 
 async def verify(
@@ -141,6 +147,13 @@ async def parser_status(
 # References come back as Reference objects either way. When verification did
 # not run they are simply unresolved, so the caller has one list to render
 # rather than two shapes to reconcile.
+#
+# Both paths write the library, including the one where verification failed.
+# An unresolved reference still belongs in it: the agent may not cite it, since
+# can_be_cited_by_the_agent is false without an external id, but stage 4 needs
+# to know the reference exists in order to say so. Writing only on success
+# would leave a rate limited paper with no library at all, which is a different
+# and less honest failure than a library full of unresolved entries.
 #
 # The whole verification step runs under a single time budget. Without one, a
 # paper with seventy references discovers that a database is throttling it

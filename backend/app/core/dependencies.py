@@ -2,12 +2,18 @@ from functools import lru_cache
 
 from app.core.config import get_settings
 from app.core.http_cache import HttpCache
+from app.core.library_provider import LibraryProvider
 from app.core.storage_provider import StorageProvider
 
 
 @lru_cache
 def get_storage_provider() -> StorageProvider:
     return StorageProvider(papers_dir=get_settings().papers_dir)
+
+
+@lru_cache
+def get_library_provider() -> LibraryProvider:
+    return LibraryProvider(storage=get_storage_provider())
 
 
 @lru_cache

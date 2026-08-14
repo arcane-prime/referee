@@ -39,6 +39,7 @@ class Settings(BaseSettings):
     review_model: str = "gpt-oss-120b"
     review_timeout_seconds: float = 90.0
     review_concurrency: int = 4
+    reasoning_effort: str = "low"
 
     http_cache_enabled: bool = True
     http_cache_ttl_hours: float = 720.0
