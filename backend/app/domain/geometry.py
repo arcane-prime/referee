@@ -32,16 +32,3 @@ class BBox(BaseModel):
             except ValueError:
                 continue
         return boxes
-
-
-# Notes
-#
-# GROBID returns element geometry as "page,x,y,width,height", joining multiple
-# rectangles with ";" when an element wraps across lines.
-#
-# These are captured during extraction because they can only be produced while
-# the PDF is being read, the same way source maps can only be produced during a
-# build. They are what would later let the UI point at a citation inside the
-# user's original file. Nothing in the pipeline depends on them, so a malformed
-# rectangle is skipped rather than raised on: no parse should fail because a
-# coordinate was unreadable.

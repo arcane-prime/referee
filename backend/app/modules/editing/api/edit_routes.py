@@ -106,25 +106,3 @@ def _describe(proposal) -> str | None:
         )
 
     return f"{len(proposal.patches)} change(s) ready for review."
-
-
-# Notes
-#
-# Two routes, because approval is a real step rather than a UI affordance.
-# /edit/plan computes what would happen and writes nothing; /edit/apply is the
-# only thing in this module that touches the disk. A client that calls plan and
-# never calls apply has cost the user nothing but a model call.
-#
-# Both return 200 when an edit is refused for citation reasons, because a
-# refusal is a successful answer to "what would this command do". The proposal
-# carries the rejected operations and why, and the message says so in a
-# sentence. Only apply() raises, since being unable to write is a genuine
-# failure of the request that was made.
-#
-# The refusal message deliberately names citations as the cause. A researcher
-# whose command was declined needs to know it was declined to protect their
-# references, not that something went wrong.
-#
-# Nothing in this file understands what an edit is. Route bodies validate,
-# delegate and describe; the provider owns the rules. That is what keeps the
-# editing logic testable without a client.

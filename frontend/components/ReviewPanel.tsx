@@ -197,27 +197,3 @@ function Stat({ label, value, warn }: { label: string; value: number; warn?: boo
     </div>
   );
 }
-
-/*
- Notes
-
- What the review can do follows from whether the references were verified, and
- is not a choice put to the user. With verified references it checks claims
- against the abstracts they cite; without them it falls back to flagging claims
- that carry no citation at all, which needs nothing but the paper. The panel
- says which of those it is about to do rather than offering a control whose
- correct setting the user has no way to know.
-
- The quote is the point of this screen wherever a source was checked. Every
- finding shows the exact sentence from the abstract the judgement was made
- from, so a researcher can disagree by reading the same text the model read. A
- verdict with no visible evidence is indistinguishable from a guess.
-
- Only verified quotes render as quotes. If the model produced text that was not
- found in the abstract, the card says so plainly rather than showing an
- unverified quotation that looks authoritative.
-
- block_id and sentence index are shown deliberately. They make a finding
- checkable against the parse above, and they exist because sentences are
- derived in code rather than returned by the model.
-*/

@@ -190,7 +190,7 @@ Roughly seven hours of work, in this order:
 1. **`README.md`** (~30 min). How to run it. If a grader cannot start the app,
    nothing else gets marked. Cover: Python venv, `pip install -r
    requirements.txt`, GROBID via Docker (section 2) or the public fallback,
-   `CEREBRAS_API_KEY` optional, `npm install && npm run dev`, and that the tests
+   `OPENAI_API_KEY` optional, `npm install && npm run dev`, and that the tests
    need none of it.
 2. **`docs/01-citation-parsing.md`** (~75 min). The brief asks for the pipeline
    steps, the intermediate representation, where CSL-JSON fits, and how styles
@@ -218,8 +218,9 @@ Deferred deliberately, all fine to leave undone:
 
 - Author-year fixture. Style detection works, but only numbered style is proven
   against real GROBID output.
-- Cerebras pacing. The free tier allows 5 requests a minute and there is no
-  client-side token bucket, so a command touching many blocks crawls.
+- Client-side pacing. There is no token bucket in front of the model client.
+  Not currently a problem on OpenAI, but it is the thing that would need adding
+  if a provider with a tight per-minute limit were used again.
 - Resolution query ladder. Retrying a failed lookup with the title truncated at
   the last comma would rescue roughly two references in thirty-eight. Measured,
   not guessed — see the Ern and Guermond case.
@@ -465,8 +466,10 @@ Raw material for the limitations section of the submission.
   takes half, GROBID idles at 2.4 GB of that. `docker start grobid` brings it
   back in about 40 seconds. Commenting out `GROBID_URL` in `backend/.env` falls
   back to the public instance and frees the memory.
-- Cerebras free tier is 5 requests per minute. Review and editing share it and
-  there is no client-side pacing, so large commands are slow and can fail.
+- A full review takes about two minutes on a 335-sentence paper with 51
+  citations to check. Responses are cached on the exact request body, so a
+  second run over an unchanged paper is instant, which is what makes a screen
+  recording repeatable.
 - Papers extracted before `library.json` existed have no library, so the agent
   may not add citations to them. It can still shorten and rewrite, and the UI
   says so.

@@ -381,39 +381,6 @@ class TestReviewOrchestration:
         assert findings == []
 
 
-# Notes
-#
-# Every test here runs with no API key and no network, because the LLM sits
-# behind a protocol and the stub returns canned JSON. The three passes, the
-# quote verification and the finding assembly are all exercised offline.
-#
-# TestQuoteVerification and
-# test_a_fabricated_quote_is_downgraded_whatever_the_model_claimed are the two
-# that matter most. Together they assert the property the whole stage is built
-# to guarantee: a model can claim "supports" as confidently as it likes, and if
-# its quote is not literally present in the abstract the finding is downgraded
-# to insufficient_evidence. The guarantee is enforced by string matching, so it
-# holds for any model.
-#
-# test_a_finding_built_on_a_fabricated_quote_is_never_reported carries that
-# through to the orchestrator: not only is the grade downgraded, the finding
-# never reaches the user at all, because is_grounded requires at least one
-# verified quote.
-#
-# test_findings_anchor_to_real_spans_in_the_document checks the other half of
-# the design. It slices the document's own prose with the finding's offsets and
-# requires the result to equal the reported sentence, which is only possible
-# because sentences are derived in code rather than returned by the model.
-#
-# test_an_out_of_range_index_is_discarded guards the same idea in the claim
-# pass: the model answers with indices into a list we supplied, and an index we
-# did not offer is thrown away rather than trusted.
-#
-# test_an_empty_review_is_a_valid_outcome exists because a pipeline that only
-# works when the model has something to say will fall over on the first clean
-# paper.
-
-
 class TestNonCitingBlocks:
     def document_with_abstract_and_body(self):
         return Document(

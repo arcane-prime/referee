@@ -24,14 +24,3 @@ def get_http_cache() -> HttpCache:
         ttl_seconds=settings.http_cache_ttl_hours * 3600,
         enabled=settings.http_cache_enabled,
     )
-
-
-# Notes
-#
-# Storage is shared infrastructure, so it is constructed once here rather than
-# rebuilt inside each module's wiring. Two modules building their own instance
-# would work, but the on-disk layout would then be defined in two places.
-#
-# The cache takes no arguments because Settings is a Pydantic model and so not
-# hashable. get_settings() is already cached, so resolving it inside yields the
-# same single instance.

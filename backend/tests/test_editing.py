@@ -607,34 +607,3 @@ def test_the_library_is_append_only(tmp_path):
     library.merge("p_1", [fetched("ref_2")])
 
     assert library.load("p_1").ids == {"ref_1", "ref_2"}
-
-
-# Notes
-#
-# These tests are the reason the placeholder layer was built before anything
-# that calls a model. Every one of them runs offline in milliseconds, because
-# the citation-safety core is pure functions over the domain model.
-#
-# test_the_model_never_sees_a_ref_id is the load-bearing one. It asserts the
-# negative that the whole design rests on: no reference id and no printed
-# marker reaches the text handed to the LLM, so there is nothing for it to
-# rewrite, retarget or invent.
-#
-# The three refusal tests fix the behaviour the brief calls non-negotiable. A
-# rewrite that drops, invents or duplicates a marker raises rather than
-# applying, and the reason names the marker so the failure can be shown to the
-# user instead of logged. Repairing any of these would mean guessing what the
-# author meant.
-#
-# test_a_citation_may_move_and_keeps_its_ref_ids is the counterweight to those.
-# Citations are not frozen. A shortened paragraph is allowed to carry its
-# citations to new positions, which is what the brief asks for when text moves
-# or shrinks; what is forbidden is authoring them.
-#
-# test_inflate_reuses_the_original_node_objects checks identity rather than
-# equality on purpose. Rebuilding an equal-looking CiteNode would pass an
-# equality assertion while quietly proving the opposite of the design.
-#
-# The formula and cross-reference test exists because those nodes get the same
-# protection for free. The brief only asks for citations, but a shorten that
-# silently deleted an equation would be the same class of bug.

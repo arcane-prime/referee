@@ -57,11 +57,3 @@ def get_resolution_provider() -> ResolutionProvider:
         abstracts=get_abstract_backend(),
         concurrency=get_settings().resolution_concurrency,
     )
-
-
-# Notes
-#
-# Both backends are annotated as their protocols rather than their concrete
-# classes, so which database is primary and which supplies abstracts stays a
-# wiring decision made here rather than a dependency baked into the
-# orchestrator.

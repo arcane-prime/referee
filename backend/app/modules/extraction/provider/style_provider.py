@@ -39,24 +39,3 @@ class StyleProvider:
             return "apa", round(author_year_share, 3)
 
         return "unknown", round(max(numbered_share, author_year_share), 3)
-
-
-# Notes
-#
-# This is the only place in extraction that infers rather than records.
-# Everything else writes down what the page said; this guesses a style from a
-# sample of markers, so it returns a confidence alongside the answer and falls
-# back to "unknown" rather than to a plausible-looking result.
-#
-# "unknown" is a real, useful outcome. The user picks the style in the UI, and
-# a paper that renders correctly because the user chose is strictly better than
-# one that renders wrongly because a heuristic was confident.
-#
-# The heuristic itself is deliberately dull. A marker of digits and separators,
-# with or without brackets, is numbered. A marker containing letters and a
-# plausible publication year is author-year. Below three markers there is not
-# enough evidence to call it at all.
-#
-# ieee and apa here name the *family* of style, not the exact stylesheet. The
-# actual formatting is done later by citeproc from a .csl file, so this only
-# has to be right about which family to default the picker to.

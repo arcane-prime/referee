@@ -27,11 +27,3 @@ def get_extraction_provider() -> ExtractionProvider:
         tei_provider=TeiProvider(reference_provider=ReferenceProvider()),
         style_provider=StyleProvider(),
     )
-
-
-# Notes
-#
-# get_parser_backend is annotated as the Protocol rather than as GrobidProvider
-# so the choice of backend stays a wiring decision. Swapping the hosted GROBID
-# for a local container is a settings change; swapping GROBID for something
-# else entirely is a change to this one function.

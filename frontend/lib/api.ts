@@ -1,4 +1,5 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+export const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export interface UploadedPaper {
   paper_id: string;
@@ -86,18 +87,6 @@ export interface ExtractionSummary {
   style_confidence: number;
 }
 
-export interface Verification {
-  attempted: boolean;
-  succeeded: boolean;
-  message: string | null;
-  search_api: string | null;
-  resolved: number;
-  ambiguous: number;
-  unresolved: number;
-  with_abstract: number;
-  with_doi: number;
-}
-
 export interface ExtractionResult {
   paper_id: string;
   extracted_at: string;
@@ -105,7 +94,6 @@ export interface ExtractionResult {
   document: ExtractedDocument;
   references: ResolvedReference[];
   summary: ExtractionSummary;
-  verification: Verification;
 }
 
 export type ResolutionStatus = "resolved" | "ambiguous" | "unresolved";
@@ -133,6 +121,24 @@ export interface ResolvedReference {
   parsed: CSLItem | null;
   resolution: Resolution;
   provenance: string;
+}
+
+export interface ResolutionSummary {
+  total: number;
+  resolved: number;
+  ambiguous: number;
+  unresolved: number;
+  with_abstract: number;
+  with_doi: number;
+}
+
+export interface ResolutionResult {
+  paper_id: string;
+  resolved_at: string;
+  search_api: string;
+  abstract_api: string | null;
+  references: ResolvedReference[];
+  summary: ResolutionSummary;
 }
 
 export type SupportGrade =
@@ -260,6 +266,14 @@ export interface CurrentDocument {
   document: ExtractedDocument;
 }
 
+export interface ExportInfo {
+  paper_id: string;
+  revision: number;
+  available_revisions: number[];
+  detected_style: string;
+  available_styles: string[];
+}
+
 export interface ApiError {
   code: string;
   detail: string;
@@ -304,6 +318,10 @@ export async function extractPaper(paperId: string): Promise<ExtractionResult> {
   return request<ExtractionResult>(`/papers/${paperId}/extract`, { method: "POST" });
 }
 
+export async function resolvePaper(paperId: string): Promise<ResolutionResult> {
+  return request<ResolutionResult>(`/papers/${paperId}/resolve`, { method: "POST" });
+}
+
 export async function reviewPaper(
   paperId: string,
   verified: boolean,
@@ -341,6 +359,10 @@ export async function applyEdit(
   });
 }
 
+export async function getExportInfo(paperId: string): Promise<ExportInfo> {
+  return request<ExportInfo>(`/papers/${paperId}/export`, { method: "GET" });
+}
+
 export async function getDocument(
   paperId: string,
   revision?: number,
@@ -350,46 +372,3 @@ export async function getDocument(
     method: "GET",
   });
 }
-
-/*
- Notes
-
- FormData is passed to fetch without a Content-Type header on purpose. The
- browser generates multipart/form-data along with the boundary token; setting
- the header manually omits the boundary and the request fails to parse server
- side.
-
- The backend answers failures with {code, detail}. `code` is the stable value
- to branch on; `detail` is for display. A thrown RefereeApiError therefore
- always carries something showable, including for transport failures where no
- response body exists.
-
- The Inline union mirrors the backend's discriminated union on `kind`, so the
- renderer switches on the same discriminator the parser wrote. Citations are
- nodes here for the same reason they are nodes on the server: the marker text
- is never part of the prose, and the UI is what turns a CiteNode back into
- something a reader sees.
-
- There is no client for POST /papers/{id}/resolve, though the endpoint exists.
- Resolution runs as part of extraction, so the UI never calls it on its own.
- The route stays on the server because the resolution module owns it and is
- usable independently; adding a function here that nothing calls would not make
- that any more true.
-
- planEdit and applyEdit are two calls because approval is a real step. planEdit
- writes nothing on the server; it returns what would happen. The proposal is
- then sent back verbatim to applyEdit, which re-verifies it against the
- document on disk rather than trusting what came from the browser. That is why
- the whole proposal travels rather than an id: the server holds no session
- state, and a proposal cannot expire because a process restarted.
-
- `approved` carries block ids, so a researcher can accept two changes and drop
- the third. The server treats an absent list as "all of them", but this client
- always sends an explicit list, because in a UI with checkboxes the difference
- between "everything" and "everything that happens to be ticked" is a bug
- waiting to be found by a user who unticked one.
-
- getDocument exists so the paper can be re-read after an edit without re-running
- extraction. Re-extracting would call GROBID and the literature databases again
- to rebuild a document that is already on disk.
-*/

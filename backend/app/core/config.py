@@ -34,12 +34,11 @@ class Settings(BaseSettings):
     search_fallback_enabled: bool = True
     verification_budget_seconds: float = 75.0
 
-    cerebras_url: str = "https://api.cerebras.ai"
-    cerebras_api_key: str = ""
-    review_model: str = "gpt-oss-120b"
+    openai_url: str = "https://api.openai.com"
+    openai_api_key: str = ""
+    review_model: str = "gpt-4.1-mini"
     review_timeout_seconds: float = 90.0
-    review_concurrency: int = 4
-    reasoning_effort: str = "low"
+    review_concurrency: int = 12
 
     http_cache_enabled: bool = True
     http_cache_ttl_hours: float = 720.0
@@ -56,35 +55,3 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
-
-
-# Notes
-#
-# Settings are read once and cached, so every provider sees the same values and
-# tests can override them by clearing the cache.
-#
-# `grobid_url` defaults to the public hosted GROBID so extraction works with no
-# local infrastructure. That instance is shared and rate limited, so it is a
-# development convenience rather than a deployment target. Pointing at a local
-# container is a one-line change: GROBID_URL=http://localhost:8070 in .env, and
-# no code is touched.
-#
-# `data_dir` is relative by default, which resolves against the process working
-# directory. Run uvicorn from the backend/ folder, or set DATA_DIR to an
-# absolute path in .env.
-#
-# The CORS list covers 3000 and 3001 because Next silently moves to the next
-# free port when 3000 is occupied. A missing origin surfaces in the browser as
-# a CORS failure that gives no hint the real cause was a port change.
-#
-# `openalex_mailto` is optional but worth setting. Sending it opts into
-# OpenAlex's polite pool, which is faster and more reliable, and it is the
-# courteous way to use a free public service at forty requests a paper.
-#
-# `semantic_scholar_api_key` is optional too. Without it the client shares a
-# small anonymous rate limit, which is tolerable because Semantic Scholar is
-# only asked for abstracts OpenAlex could not supply.
-#
-# `resolution_concurrency` bounds how many references are looked up at once.
-# Forty sequential lookups is a long spinner; forty simultaneous ones is how a
-# client earns a rate limit.

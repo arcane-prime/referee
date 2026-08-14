@@ -39,21 +39,3 @@ def attr(element: etree._Element | None, name: str) -> str | None:
 
 def normalise_space(value: str) -> str:
     return " ".join(value.split())
-
-
-# Notes
-#
-# Every TEI element is really named "{http://www.tei-c.org/ns/1.0}p" rather
-# than "p". A lookup that forgets the namespace does not error; it silently
-# matches nothing, which is the single most common way a TEI parser appears to
-# work while returning empty documents. Routing every query through these
-# helpers keeps the prefix in one place.
-#
-# local_name strips the namespace for tag comparisons. It also guards against
-# comments and processing instructions, whose .tag is a callable rather than a
-# string and would otherwise raise on rsplit.
-#
-# text_of collapses whitespace because PDF-derived TEI is full of line breaks
-# from the original page layout. Those are an artefact of where words happened
-# to fall on the page, not content, and preserving them would put phantom
-# newlines in the middle of sentences.

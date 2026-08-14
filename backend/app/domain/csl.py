@@ -82,27 +82,3 @@ class CSLItem(BaseModel):
     def to_csl_json(self) -> dict:
         payload = self.model_dump(by_alias=True, exclude_none=True)
         return {key: value for key, value in payload.items() if value != []}
-
-
-# Notes
-#
-# CSL-JSON is the one canonical shape for citation data. Everything becomes a
-# CSLItem: what is scraped out of the user's PDF now, and what is fetched from
-# OpenAlex later. One shape means the renderer never has to know where a
-# reference came from.
-#
-# All printing is done by Pandoc citeproc from a .csl stylesheet. There are no
-# string templates for citations anywhere in this codebase and there should
-# never be one, which is also why "[12]" versus "(Smith, 2019)" is not a
-# property of the data.
-#
-# CSL uses hyphenated and capitalised keys on the wire ("container-title",
-# "date-parts", "DOI"); those are the aliases. Anything handed to citeproc must
-# go through to_csl_json() so it comes out in wire form.
-#
-# CSLName keeps `literal` for organisations and names that could not be split.
-# Extraction never guesses at splitting a name it cannot confidently parse.
-#
-# to_csl_json drops empty lists as well as nulls. exclude_none alone would emit
-# "editor": [], and an empty name array is not the same thing to citeproc as an
-# absent one.

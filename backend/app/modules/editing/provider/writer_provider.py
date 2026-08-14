@@ -53,33 +53,3 @@ class WriterProvider:
             schema_name="edited_paragraph",
         )
         return (payload.get("text") or "").strip()
-
-
-# Notes
-#
-# The writer sees one paragraph and nothing else. It has no access to the
-# document, the library, the plan or the other blocks, so the blast radius of a
-# bad completion is one block that then has to pass two independent checks.
-#
-# What it receives is already deflated: citations, cross-references and
-# formulas have been replaced by opaque markers by placeholder_provider. The
-# rules in the system prompt ask it to preserve them, but nothing here depends
-# on it obeying. If it drops, invents or repeats a marker, inflate() refuses
-# the result and the user is told which markers were lost. The prompt is a
-# request; the round-trip check is the guarantee.
-#
-# "Do not write citations yourself in any other form" is the one rule that
-# guards something the marker check cannot see. A model that writes "(Smith,
-# 2019)" as ordinary prose has not broken any marker, but it has put an
-# unverifiable citation into the paper as plain text. Style detection and the
-# extraction invariant both assume prose contains no citation markers, so this
-# keeps that true after an edit as well.
-#
-# The word target for a shorten is computed here rather than asked for as a
-# percentage. Models are much better at "about 40 words" than at "70% of the
-# original length", and the caller keeps a ratio because that is what the plan
-# expresses.
-#
-# The response is JSON with one string field rather than raw text, so this
-# backend has exactly one method shape across every call in the codebase and
-# providers with constrained decoding can enforce it.

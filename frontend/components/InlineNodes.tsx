@@ -54,24 +54,3 @@ export function BlockView({
     </p>
   );
 }
-
-/*
- Notes
-
- One renderer, used by both the manuscript and the edit diff. That is what
- makes a proposed change comparable to the text it replaces: a citation drawn
- in the diff is drawn by the same code that drew it in the paper, so a chip
- that looks identical is identical.
-
- Duplicating this per panel is how the two drift, and the drift would land
- exactly on the thing the user is trying to check.
-
- The switch is on the same `kind` discriminator the backend wrote. A citation
- is a chip carrying reference ids and the marker text never appears in the
- surrounding prose, because in the stored data it does not exist: "[12]" is
- produced at render time, here and by citeproc on export.
-
- Keys are array indices, which is safe here and nowhere else: these lists are
- rebuilt whole from the server on every change and never reordered in place, so
- an index is stable for as long as the list is.
-*/

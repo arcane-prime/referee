@@ -91,35 +91,3 @@ def _describe(delta: CitationDelta) -> str:
     if delta.added:
         parts.append(f"would add {', '.join(sorted(set(delta.added)))}")
     return " and ".join(parts)
-
-
-# Notes
-#
-# This is the second guard on the same property, and it is deliberately
-# independent of the first. The placeholder layer is per block and structural:
-# it works by never letting the model touch a citation. This one is whole
-# document and arithmetic: it counts ref ids before and after and compares them
-# against what the operation was allowed to do. A bug in either does not
-# disable the other.
-#
-# COUNT_RULES lives in domain/edit.py next to the operations rather than here,
-# so adding an operation forces a decision about what it may do to citations.
-# An operation with no rule is refused rather than defaulted, because "may this
-# silently drop citations?" is not a question anyone should get to leave blank.
-#
-# compare() counts multiplicity rather than membership. Citing ref_12 twice and
-# citing it once are different claims about the paper, and a set difference
-# would call them the same.
-#
-# check_citable is the anti-fabrication gate and it is a lookup, not a
-# judgement. A new citation must name a reference that is already in the
-# library and that came back from OpenAlex or Semantic Scholar carrying a real
-# external id. A model cannot talk its way past this: an id it invented is not
-# in the library, and a reference merely parsed out of the user's own PDF has
-# provenance "parsed_from_pdf" and fails the second half. That is why "never
-# hallucinated" is a property of the types here rather than an instruction in a
-# prompt.
-#
-# Violations carry a sentence a researcher can read, naming the actual ref ids.
-# The user is going to see this text when an edit is refused, and "invariant
-# violation in enforce()" would tell them nothing about their paper.

@@ -58,15 +58,3 @@ __all__ = [
     "TextRun",
     "XRefNode",
 ]
-
-
-# Notes
-#
-# This package imports nothing but Pydantic. That constraint is deliberate:
-# every stage's input and output type lives here with zero I/O, so the seams
-# between extraction, resolution, review, edit and export are visible from type
-# signatures alone.
-#
-# These are shared domain models rather than any one module's DTOs. Extraction
-# creates them, review reads them, edit rewrites them and export renders them,
-# so they sit outside modules/ and belong to none of them.

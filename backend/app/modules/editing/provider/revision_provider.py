@@ -40,20 +40,3 @@ class RevisionProvider:
 
     def load_library(self, paper_id: str) -> Library:
         return self._library.load(paper_id)
-
-
-# Notes
-#
-# Revisions are append-only. save() writes rev_N+1 and never touches rev_N, so
-# undo is pointing at a smaller number rather than a reverse operation that has
-# to be correct. The original PDF is never rewritten at all, which is the
-# product promise behind the whole stage: whatever the agent does, the file the
-# researcher uploaded is still there.
-#
-# The latest revision is read off the directory rather than tracked in a
-# counter. The files are the truth, and a counter is one more thing that can
-# disagree with them after a crash.
-#
-# Reading the library is delegated to core rather than reimplemented, because
-# resolution writes that file and editing only reads it. Two copies of the
-# merge rule is how an append-only guarantee stops being one.

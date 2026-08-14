@@ -25,19 +25,3 @@ def get_edit_provider() -> EditProvider:
         planner=PlanProvider(llm=llm),
         writer=WriterProvider(llm=llm),
     )
-
-
-# Notes
-#
-# The LLM backend is borrowed from the review module rather than built again
-# here. There is one model client per process, so editing and review share a
-# cache and a rate limit budget instead of quietly competing for one.
-#
-# With no API key that borrowed backend is the stub, which means the edit
-# routes stay reachable offline. A planner backed by the stub returns no
-# operations, so a command produces an empty proposal that changes nothing,
-# which is the correct offline behaviour rather than an error.
-#
-# RevisionProvider is separate and separately cached because the export route
-# will need to read revisions without pulling a model client into its
-# dependency graph.

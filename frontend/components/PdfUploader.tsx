@@ -97,22 +97,3 @@ export default function PdfUploader({
     </section>
   );
 }
-
-/*
- Notes
-
- Uploading stores the file and nothing else. It does not trigger parsing, so
- this component never calls the extract endpoint and never knows it exists; it
- hands the caller a paper_id and stops.
-
- Status is one discriminated union rather than several booleans, so states such
- as "uploading and errored at the same time" cannot be represented.
-
- The file input is cleared after each selection. Without that, choosing the
- same file twice in a row fires no change event and the second attempt appears
- to do nothing.
-
- Client-side validation of the file type is intentionally absent. The server
- checks the PDF magic bytes, and duplicating a weaker version of that check
- here would only add a second place for the rule to drift.
-*/

@@ -204,39 +204,3 @@ def _highest_minted(patches: list[BlockPatch]) -> int:
                 except ValueError:
                     continue
     return highest
-
-
-# Notes
-#
-# propose() and apply() are two calls because a proposal is a value the user
-# can decline. propose() writes nothing at all: it loads a revision, asks the
-# planner what to do, runs each operation, and returns what would happen. Only
-# apply() touches the disk, and only for the blocks the user approved.
-#
-# A refused operation does not fail the request. If the writer returned text
-# that would have dropped a citation, that one operation becomes a
-# RejectedOperation carrying the reason, and the operations that succeeded are
-# still offered. An edit that quietly did less than it claimed is the failure
-# this stage exists to prevent; an edit that did four of five things and said
-# so is useful.
-#
-# apply() re-checks everything rather than trusting the proposal it was handed.
-# The proposal travels to the browser and back, so by the time it returns it is
-# user input. Three things are verified: the base revision still matches, every
-# targeted block still holds exactly the inlines the patch was computed from,
-# and the citation counts still satisfy the operation's rule. A tampered
-# `after` list that dropped a citation fails the third check; a stale proposal
-# fails the first two.
-#
-# Comparing block.inlines to patch.before is a full structural comparison, not
-# an id or a hash. It is the cheapest way to be certain the text being replaced
-# is the text the user actually read and approved.
-#
-# New citation nodes are minted as c_e1, c_e2 from the document's own counter,
-# so an id created by an edit can never collide with one the parser assigned.
-# The counter is advanced on the document before saving, which is why it is
-# serialised with the revision: a counter living only in memory hands out
-# colliding ids after a restart.
-#
-# The planner and writer are injected rather than constructed here, so the
-# whole orchestrator runs against the stub backend with no key and no network.

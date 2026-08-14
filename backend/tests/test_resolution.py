@@ -86,10 +86,25 @@ class TestOpenAlexFieldShapes:
     def test_single_token_name_is_kept_literal(self):
         assert split_display_name("Plato").literal == "Plato"
 
+    def test_comma_ordered_name_is_read_family_first(self):
+        name = split_display_name("Li, Yihan")
+
+        assert name.family == "Li"
+        assert name.given == "Yihan"
+
+    def test_comma_ordered_name_keeps_a_multi_part_given_name(self):
+        name = split_display_name("Buitelaar, Paul Andreas")
+
+        assert name.family == "Buitelaar"
+        assert name.given == "Paul Andreas"
+
 
 class TestSimilarity:
     def test_normalisation_strips_case_accents_and_punctuation(self):
         assert normalise_text("Jürgen's Long-Term Memory!") == "jurgen s long term memory"
+
+    def test_normalisation_folds_the_german_sharp_s(self):
+        assert normalise_text("Roßmann") == normalise_text("Rossmann")
 
     def test_identical_titles_score_one(self):
         assert title_similarity("Long short-term memory", "Long Short-Term Memory") == 1.0
@@ -172,6 +187,22 @@ class TestScoring:
 
         assert ranked[0].score.title > 0.3
 
+    def test_partial_parse_with_no_title_still_falls_back_to_the_raw_string(
+        self, matcher
+    ):
+        raw = "Jimmy Lei Ba, Jamie Ryan Kiros, and Geoffrey E Hinton. Layer normalization. 2016."
+        partial = RawReference(
+            id="ref_0",
+            raw=raw,
+            parsed=CSLItem(id="ref_0", title=None, author=[CSLName(family="Ba")]),
+        )
+
+        ranked = matcher.rank(
+            partial, [record("Layer normalization", ["Ba", "Kiros", "Hinton"], 2016)]
+        )
+
+        assert ranked[0].score.title > 0.3
+
 
 class TestDecision:
     def test_no_candidates_is_unresolved_with_a_reason(self, matcher):
@@ -216,29 +247,6 @@ class TestDecision:
         if AMBIGUOUS_THRESHOLD <= ranked[0].score.total < RESOLVED_THRESHOLD:
             assert status == "ambiguous"
             assert best is not None
-
-
-# Notes
-#
-# Every test here runs with no network. SourceRecord is a domain object, so
-# candidates are hand-written, which is the whole point of having the search
-# backends return domain types rather than raw JSON.
-#
-# The field-shape tests exist because all three of those OpenAlex quirks are
-# silent failures rather than errors. An unstripped DOI URL never matches a DOI
-# parsed from a PDF, and an un-rebuilt inverted index is a dict where stage 3
-# expects prose.
-#
-# test_matching_title_with_wrong_authors_and_year_does_not_resolve and the
-# near-identical-candidates test are the two that protect against the failure
-# mode that actually matters here: confidently attaching the wrong paper. A
-# real search for "Long short-term memory" returns both the 1997 Hochreiter
-# paper and a 2012 Graves book chapter with the same title.
-#
-# The preprint test encodes the most common shape in this literature: arXiv one
-# year, conference the next. A scorer demanding an exact year rejects correct
-# matches constantly, so the one-year tolerance is asserted rather than left as
-# a constant nobody checks.
 
 
 class TestDuplicateCollapsing:

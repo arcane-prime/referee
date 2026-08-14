@@ -107,6 +107,11 @@ def split_display_name(display_name: str) -> CSLName:
     if not cleaned:
         return CSLName(literal=display_name)
 
+    if "," in cleaned:
+        family, _, given = cleaned.partition(",")
+        if family.strip():
+            return CSLName(given=given.strip() or None, family=family.strip())
+
     parts = cleaned.rsplit(" ", 1)
     if len(parts) == 1:
         return CSLName(literal=cleaned)
@@ -322,88 +327,3 @@ class OpenAlexProvider:
         if first and last:
             return f"{first}-{last}"
         return str(first or last) if (first or last) else None
-
-
-# Notes
-#
-# OpenAlex is the primary source because it needs no API key, which means a
-# fresh clone of this repo resolves references without anyone signing up for
-# anything. Sending a mailto opts into their polite pool, which is faster and
-# more reliable, so the User-Agent and the query parameter both carry it.
-#
-# Three shapes in their responses need translating, and each one is a trap:
-#
-#   doi comes back as a URL ("https://doi.org/10.1162/...") rather than a bare
-#   DOI. Comparing an unstripped value against a DOI parsed out of a PDF never
-#   matches.
-#
-#   id is also a URL ("https://openalex.org/W2064675550").
-#
-#   abstract_inverted_index is a map of word to positions, not text. OpenAlex
-#   publishes it this way for licensing reasons. reconstruct_abstract puts the
-#   words back in order, which is the only way stage 3 ever sees an abstract.
-#
-# Some records carry a citation string in that field rather than an abstract.
-# The RNN encoder-decoder paper reconstructs to "Kyunghyun Cho, Bart van
-# Merrienboer, ... Proceedings of EMNLP. 2014." — perfectly ordered, and
-# useless. It is a data quality problem at the source, not a reconstruction
-# bug, and it is invisible unless you read the output.
-#
-# It matters because stage 3 checks claims against abstracts. Handing that
-# string to the review model wastes a call and produces a finding that says
-# nothing, so an abstract that does not look like prose is treated as absent.
-# Semantic Scholar is then asked for it through the existing backfill, which
-# is exactly the gap that fallback was built for.
-#
-# The test is deliberately blunt: too short to be an abstract, or short and
-# ending in a bare year the way a citation does. Anything cleverer would risk
-# discarding real abstracts, and a false negative here merely triggers a
-# fallback lookup rather than losing information.
-#
-# Author names arrive as one display string, so split_display_name takes the
-# last whitespace-separated token as the family name. That is a heuristic and
-# it is wrong for names like "van Beethoven". It is acceptable here because
-# matching compares surnames on both sides symmetrically and because the
-# authoritative rendering at export time comes from the matched record's own
-# fields, not from our split. It is called out rather than hidden.
-#
-# search falls back from a title filter to a general search when the title
-# filter finds nothing. The title filter is precise and is what a real
-# reference usually needs; the general search catches entries whose title we
-# parsed badly, which is exactly the population most in need of a second
-# chance.
-#
-# The select parameter asks for only the fields used here. OpenAlex records are
-# large, and the abstract index in particular is heavy, so fetching whole works
-# for forty references wastes bandwidth on both sides.
-#
-# A 404 on a DOI lookup is a legitimate answer meaning "no such work", not a
-# failure, which is why it is allowed to return None rather than raise.
-#
-# filter_safe exists because OpenAlex's filter parameter has its own grammar,
-# and ordinary title punctuation collides with it. Commas separate filters,
-# colons split a key from its value, pipes mean OR, and — the one that is easy
-# to miss — ? and * are wildcards, which the stemmed title.search field rejects
-# outright with a 400.
-#
-# None of these are exotic. A title ending in a question mark ("Can active
-# memory replace attention?") or containing a subtitle after a colon is
-# completely normal, and every one of them fails the request rather than simply
-# returning nothing. The characters are replaced with spaces rather than
-# deleted so words either side do not weld together.
-#
-# The general search parameter has no such grammar, so the fallback path passes
-# the query through untouched.
-#
-# OpenAlex enforces a daily budget as well as a rate, and the two are not the
-# same failure. A burst is worth waiting a few seconds for; an exhausted daily
-# quota comes back with a Retry-After measured in hours, and sleeping through
-# that is pointless. Retry-After is therefore read rather than assumed, and a
-# wait longer than a minute fails immediately with the real number in the
-# message, so the caller learns "the quota resets in 9.7 hours" instead of
-# watching a spinner and then reading "try again shortly".
-#
-# One paper is roughly forty to eighty requests against a free allowance of a
-# thousand a day, so a dozen debugging runs exhausts it. That is the concrete
-# argument for the deferred HTTP cache: without it, iterating on the matcher
-# costs quota every time even though the answers never change.

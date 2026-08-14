@@ -102,30 +102,3 @@ export default function SplitPane({
     </div>
   );
 }
-
-/*
- Notes
-
- The two panes scroll independently rather than the page scrolling as a whole.
- That is the entire point: the parse and the review are read against each
- other, and a single column forces a scroll between every comparison.
-
- Width lives in a CSS custom property rather than in inline flex-basis so the
- narrow-viewport media query can drop back to a stacked layout by overriding
- one rule. An inline flex-basis would win over the media query and would have
- to be fought with !important.
-
- Pointer events are used instead of mouse events so a trackpad, a touchscreen
- and a pen all work from one code path. setPointerCapture is what makes the
- drag survive the cursor leaving the divider, which is otherwise the standard
- bug in a hand-rolled splitter: move fast and the pane stops following.
-
- The divider is focusable and responds to the arrow keys because a control
- that only answers to a drag cannot be operated without a pointing device. It
- carries separator semantics with a value so a screen reader can report the
- current position rather than an unlabelled div.
-
- Clamping to 25-75% keeps either pane from being dragged to nothing. A pane
- collapsed to zero looks like a rendering fault and there is no visible handle
- left to recover it with.
-*/

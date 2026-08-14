@@ -556,6 +556,94 @@ code {
   flex-direction: column;
 }
 
+/* -------------------------------------------------------------- progress */
+
+.control__status {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  flex: 0 0 auto;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.step__dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--border);
+  flex: 0 0 auto;
+}
+
+.step--busy {
+  color: var(--text);
+}
+
+.step--busy .step__dot {
+  background: var(--accent);
+  animation: pulse 1.1s ease-in-out infinite;
+}
+
+.step--done {
+  color: var(--accent);
+}
+
+.step--done .step__dot {
+  background: var(--accent);
+}
+
+.step--failed {
+  color: var(--warn);
+}
+
+.step--failed .step__dot {
+  background: var(--warn);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
+.panel--pending {
+  border-left: 3px solid var(--accent);
+}
+
+.progress {
+  height: 3px;
+  margin-top: 0.6rem;
+  border-radius: 2px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.progress__bar {
+  display: block;
+  height: 100%;
+  width: 35%;
+  border-radius: 2px;
+  background: var(--accent);
+  animation: slide 1.4s ease-in-out infinite;
+}
+
+@keyframes slide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(340%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .step--busy .step__dot,
+  .progress__bar {
+    animation: none;
+  }
+}
+
 /* -------------------------------------------------------------- editing */
 
 .panel__heading {
@@ -807,6 +895,43 @@ code {
   overscroll-behavior: contain;
 }
 
+.pane__end {
+  flex: 0 0 auto;
+  height: 2.5rem;
+}
+
+.export {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+}
+
+.export__style {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.export__style select {
+  font: inherit;
+  font-size: 0.82rem;
+  padding: 0.3rem 0.4rem;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.35rem;
+}
+
+.export a.button {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
 .split__pane--left {
   flex: 0 0 var(--split-left, 62%);
   padding-right: 0.5rem;
@@ -877,38 +1002,3 @@ code {
     display: none;
   }
 }
-
-/* Notes
- *
- * The page has two layouts. Before a parse exists it is a narrow reading
- * column; once one does, .page--split widens it and pins it to the viewport
- * height so the panes scroll rather than the document. That is the whole
- * purpose of the split, and it only works if the page itself cannot scroll.
- *
- * The left pane's width comes from --split-left, which SplitPane sets on the
- * container while dragging. Keeping it in a custom property rather than an
- * inline flex-basis is what lets the media query below take the layout apart
- * without !important.
- *
- * Nothing sits below the split and the page has no bottom padding, so both
- * panes run to the bottom edge of the window. Any element under them would
- * cost that height on every screen, and a gap under a scrolling pane reads as
- * the content having ended when it has not.
- *
- * The panes carry min-height: 0 as well as height: 100%. Without it a flex
- * child refuses to shrink below its content size, the pane grows to fit
- * everything instead of scrolling, and the overflow rule silently does
- * nothing. overflow: hidden on .page--split is the backstop that keeps a
- * mistake there from turning into a second scrollbar on the window.
- *
- * Below 64rem there is no room for two readable columns, so the panes stack,
- * the pinned height is released and the divider is hidden. A drag handle that
- * cannot move is worse than no handle.
- *
- * overscroll-behavior: contain stops a scroll that reaches the end of one pane
- * from continuing into the page behind it, which otherwise reads as the whole
- * layout lurching while you are reading a finding.
- *
- * touch-action: none on the divider is what makes a touch drag resize the
- * panes instead of scrolling the page.
- */

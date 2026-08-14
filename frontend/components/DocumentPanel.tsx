@@ -1,5 +1,7 @@
 "use client";
 
+import type { ResolveState } from "@/app/page";
+import ExportPanel from "@/components/ExportPanel";
 import { BlockView } from "@/components/InlineNodes";
 import {
   CurrentDocument,
@@ -19,14 +21,18 @@ function referenceQuality(reference: ResolvedReference): "good" | "failed" {
 
 export default function DocumentPanel({
   extraction,
+  resolve,
   current,
   targetedBlocks,
 }: {
   extraction: ExtractionResult;
+  resolve: ResolveState;
   current: CurrentDocument;
   targetedBlocks: string[];
 }) {
-  const { references, summary, verification } = extraction;
+  const { summary } = extraction;
+  const references =
+    resolve.phase === "done" ? resolve.result.references : extraction.references;
   const document = current.document;
   const unparsed = references.filter(
     (reference) => referenceQuality(reference) === "failed",
@@ -67,7 +73,7 @@ export default function DocumentPanel({
         </p>
       </div>
 
-      <VerificationBanner extraction={extraction} />
+      <VerificationBanner resolve={resolve} total={summary.references.total} />
 
       {targeted.size > 0 && (
         <div className="panel panel--targeted">
@@ -81,7 +87,7 @@ export default function DocumentPanel({
         </div>
       )}
 
-      {verification.succeeded && (
+      {resolve.phase === "done" && (
         <div className="panel">
           <p className="panel__title">Every reference, and what we found</p>
           <ul className="refs">
@@ -163,6 +169,27 @@ export default function DocumentPanel({
           </div>
         ))}
       </div>
+
+      <div className="panel">
+        <p className="panel__title">References ({references.length})</p>
+        <ol className="ref-list">
+          {references.map((reference) => (
+            <li key={reference.id}>
+              <code>{reference.id}</code>
+              <span className={`badge badge--${referenceQuality(reference)}`}>
+                {referenceQuality(reference)}
+              </span>
+              <div className="ref-list__raw">
+                {reference.parsed?.title ?? reference.raw}
+              </div>
+            </li>
+          ))}
+        </ol>
+      </div>
+
+      <ExportPanel paperId={current.paper_id} revision={current.revision} />
+
+      <div className="pane__end" aria-hidden="true" />
     </section>
   );
 }
@@ -187,50 +214,65 @@ function RevisionBadge({ current }: { current: CurrentDocument }) {
   );
 }
 
-function VerificationBanner({ extraction }: { extraction: ExtractionResult }) {
-  const { verification } = extraction;
+function VerificationBanner({
+  resolve,
+  total,
+}: {
+  resolve: ResolveState;
+  total: number;
+}) {
+  if (resolve.phase === "idle") return null;
 
-  if (!verification.attempted) return null;
+  if (resolve.phase === "checking") {
+    return (
+      <div className="panel panel--pending">
+        <p className="panel__title">Checking references against the literature…</p>
+        <p className="hint">
+          Looking up {total} reference(s) on OpenAlex, falling back to Semantic
+          Scholar for anything it cannot find. The parse below is already
+          complete and does not depend on this.
+        </p>
+        <div className="progress" aria-hidden="true">
+          <span className="progress__bar" />
+        </div>
+      </div>
+    );
+  }
 
-  if (!verification.succeeded) {
+  if (resolve.phase === "failed") {
     return (
       <div className="panel panel--warn">
-        <p className="panel__title">Extracted, but references not verified</p>
-        <p className="hint">{verification.message}</p>
+        <p className="panel__title">References not verified</p>
+        <p className="hint">{resolve.message}</p>
         <p className="hint">
-          The parse above is complete. Claims cannot be checked against their
-          sources, and the agent may not add citations, until the databases are
-          reachable again.
+          The parse below is complete and unaffected. Claims cannot be checked
+          against their sources, and the agent may not add citations, until the
+          databases are reachable again.
         </p>
       </div>
     );
   }
 
+  const { summary, search_api } = resolve.result;
+
   return (
     <div className="panel">
-      <p className="panel__title">
-        References checked against {verification.search_api}
-      </p>
+      <p className="panel__title">References checked against {search_api}</p>
       <div className="stats">
-        <Stat label="Found" value={verification.resolved} />
-        <Stat
-          label="Uncertain"
-          value={verification.ambiguous}
-          warn={verification.ambiguous > 0}
-        />
+        <Stat label="Found" value={summary.resolved} />
+        <Stat label="Uncertain" value={summary.ambiguous} warn={summary.ambiguous > 0} />
         <Stat
           label="Not found"
-          value={verification.unresolved}
-          warn={verification.unresolved > 0}
+          value={summary.unresolved}
+          warn={summary.unresolved > 0}
         />
-        <Stat label="With abstract" value={verification.with_abstract} />
-        <Stat label="With DOI" value={verification.with_doi} />
+        <Stat label="With abstract" value={summary.with_abstract} />
+        <Stat label="With DOI" value={summary.with_doi} />
       </div>
-      {verification.with_abstract < extraction.summary.references.total && (
+      {summary.with_abstract < summary.total && (
         <p className="hint">
-          {extraction.summary.references.total - verification.with_abstract}{" "}
-          reference(s) have no abstract, so their claims cannot be checked and
-          will be skipped.
+          {summary.total - summary.with_abstract} reference(s) have no abstract,
+          so their claims cannot be checked and will be skipped.
         </p>
       )}
     </div>
@@ -253,28 +295,3 @@ function Stat({
     </div>
   );
 }
-
-/*
- Notes
-
- This pane renders the manuscript at whatever revision is current, which is why
- it takes `current` separately from `extraction`. The extraction result is a
- fact about the parse and never changes; the document is what edits rewrite.
- Conflating them would mean re-running extraction to see an edit, which would
- call GROBID and the literature databases to rebuild something already on disk.
-
- The revision badge is small but it is the visible proof of the append-only
- history. rev 0 is the original parse and every approved edit adds one, with
- every earlier revision still on disk, so "undo" is reading a smaller number
- rather than an operation that has to be correct.
-
- Blocks a pending proposal would touch are highlighted here rather than only
- listed in the diff. The researcher can see which paragraphs of their own paper
- an instruction actually selected before approving anything, which is the
- cheapest possible check on a planner that chose the wrong targets.
-
- The verification banner also states that the agent may not add citations when
- the databases were unreachable. That is not a UI nicety: with no library there
- is nothing carrying an external id, so check_citable refuses every insertion.
- Saying so up front is better than a refusal the user did not expect.
-*/

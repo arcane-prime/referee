@@ -374,9 +374,9 @@ Better written down now than discovered by a reviewer:
 - **Export is LaTeX, not the original PDF layout.** The brief recommends
   exactly this, but it is worth saying plainly that the round trip is
   structure-preserving, not pixel-preserving.
-- **The review step is currently rate limited** by the free Cerebras tier at 5
-  requests per minute, and editing adds calls on the same budget. The pacing
-  fix is known and not yet applied.
+- **A full review takes around two minutes** on a paper with 335 sentences and
+  51 citations to check. Editing is far quicker, at roughly seven seconds to
+  plan and a few more per block rewritten.
 
 ---
 

@@ -22,19 +22,3 @@ async def upload_paper(
         filename=file.filename or "upload.pdf",
         content=content,
     )
-
-
-# Notes
-#
-# The route does three things and no more: read the multipart body, hand the
-# bytes to the provider, return the DTO. Every rule about what makes an upload
-# acceptable lives in the provider, so those rules can be tested without an
-# HTTP client.
-#
-# Failures surface as domain exceptions caught by the handler in core, which is
-# why there is no try/except and no HTTPException here.
-#
-# Uploading is currently synchronous and returns as soon as the file is on
-# disk. Once parsing is attached, this call will take as long as GROBID does,
-# and the decision between blocking here or returning a pending status is made
-# at that point.

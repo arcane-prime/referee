@@ -100,35 +100,3 @@ class ExtractionProvider:
             detected_style=document.style,
             style_confidence=document.style_confidence,
         )
-
-
-# Notes
-#
-# The orchestrator owns the sequence and nothing else: read the PDF, get TEI,
-# translate it, guess the style, persist, summarise. Each step it calls is
-# independently testable, and this file holds no parsing logic of its own.
-#
-# use_cached_tei re-runs the translation against TEI already on disk without
-# calling the parser again. That is the loop the parser is actually developed
-# in, since changing a traversal rule and re-checking should not cost a
-# multi-second round trip to a container, and it means iterating on the parser
-# does not depend on the parser service being reachable at all.
-#
-# Style is applied by copying the Document rather than by having the TEI
-# provider know about style detection. The translator's job is transcription;
-# the one inferred field is attached afterwards, which keeps the seam between
-# "what the page said" and "what we concluded" visible in the code.
-#
-# The revision is written as rev_0 because extraction produces revision zero of
-# the paper. Later edits append rev_1, rev_2 and so on, and nothing ever
-# rewrites an earlier file.
-#
-# load_references exists because references are deliberately not persisted yet,
-# while resolution needs them. Re-deriving them from the stored TEI takes
-# milliseconds and cannot drift from what extraction would produce, since it is
-# the same parser over the same bytes.
-#
-# It is separate from extract() rather than a flag on it because it must have
-# no side effects: it does not call the parser, does not rewrite grobid.tei.xml
-# and does not overwrite rev_0.json. Resolving a paper should not silently
-# mutate the extraction it was resolving.

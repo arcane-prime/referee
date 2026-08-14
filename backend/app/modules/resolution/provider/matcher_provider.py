@@ -28,7 +28,7 @@ def normalise_text(value: str | None) -> str:
         return ""
     folded = unicodedata.normalize("NFKD", value)
     stripped = "".join(char for char in folded if not unicodedata.combining(char))
-    without_punctuation = PUNCTUATION.sub(" ", stripped.lower())
+    without_punctuation = PUNCTUATION.sub(" ", stripped.casefold())
     return WHITESPACE.sub(" ", without_punctuation).strip()
 
 
@@ -114,7 +114,7 @@ class MatcherProvider:
         parsed = reference.parsed
 
         title = title_similarity(
-            parsed.title if parsed else reference.raw,
+            (parsed.title if parsed and parsed.title else None) or reference.raw,
             record.csl.title,
         )
         authors = author_similarity(parsed, record.csl)
@@ -201,78 +201,3 @@ class MatcherProvider:
                 )
 
         return "resolved", best, "Matched with high confidence."
-
-
-# Notes
-#
-# This is where stage 2 lives or dies, and it is deliberately pure: it takes a
-# reference and a list of records and returns numbers. No HTTP, no disk. That
-# is what lets it be tested against hand-written records in milliseconds, and
-# what lets the thresholds be tuned against real data without waiting on an
-# API.
-#
-# Every reference in the sample paper had to be matched by title, because not
-# one of its forty entries carried a DOI. Preprint-era bibliographies are like
-# that. So title similarity is the dominant signal by necessity, and authors
-# and year exist to stop it being the only one.
-#
-# Title similarity combines two views because each fails differently. A
-# sequence ratio handles small edits and typos but punishes reordered words; a
-# token measure handles reordering but ignores order entirely and so rates
-# "attention is all you need" against "you need all attention" as identical.
-# Taking the better of the two lets a genuine match win on whichever view suits
-# it, and neither view alone rescues a bad candidate.
-#
-# Author similarity is containment rather than a symmetric overlap: what
-# fraction of *our* authors appear in theirs. Bibliographies truncate with "et
-# al", so our list is routinely a prefix of the real one. Penalising a record
-# for listing the authors the printed reference omitted would punish the
-# correct answer.
-#
-# A one-year gap scores 0.85 rather than being treated as a mismatch. The
-# single most common shape in this literature is an arXiv preprint in one year
-# and the conference version the next. They are the same work, and a scorer
-# that insists on an exact year rejects correct matches constantly.
-#
-# Missing signals are skipped and the weights renormalised over what remains,
-# rather than scored as zero. A reference with no parsed authors is not
-# evidence of a bad match; it is an absence of evidence, and scoring it as a
-# failure would push every degraded reference to unresolved regardless of how
-# good the title match was.
-#
-# When a reference has no parsed title at all, the raw printed string is scored
-# against the candidate title instead. It is noisier, but it is exactly the
-# case where GROBID failed and the reference most needs rescuing, and the raw
-# string is always populated for this reason.
-#
-# The margin rule is the part that is easy to leave out and matters most.
-# A high score alone is not confidence: searching "Long short-term memory"
-# returns the 1997 Hochreiter paper and a 2012 book chapter with the identical
-# title. Both score near the top on title alone. If the top two are within a
-# few points of each other, the honest answer is ambiguous, and the candidates
-# are handed to the user rather than a coin flip being recorded as fact.
-#
-# Duplicates are collapsed before the margin rule runs, and skipping that step
-# breaks the margin rule outright. Live output made this obvious: searching for
-# the RNN encoder-decoder paper returns the EMNLP version and the arXiv
-# preprint as two records, identical in title, year and authors, scoring 1.00
-# each. They are one work indexed twice, not two candidates competing, and the
-# margin rule read the tie as uncertainty and refused a perfect match.
-#
-# Preprint plus published version is the most common shape in this literature,
-# so without this the matcher would mark a large share of its best matches
-# ambiguous and push them at the user for a decision that is not theirs to
-# make.
-#
-# Two records count as the same work if they share a DOI, or if their titles
-# are near identical and their years are within one. That last tolerance is the
-# same preprint-versus-conference gap the year scoring already allows for.
-#
-# When collapsing, the surviving record is the more useful one rather than the
-# higher scoring one, since by construction the scores are near identical: an
-# abstract first, because stage 3 cannot work without it, then the published
-# DOI over the arXiv one, because that is what a reader should be cited to.
-#
-# The thresholds are starting points chosen to be tuned against real output,
-# not derived from anything. They are constants at the top of the file so that
-# tuning is a one-line change with tests to check it against.

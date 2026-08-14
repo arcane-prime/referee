@@ -138,36 +138,3 @@ class DiscoveryProvider:
             if ids.openalex:
                 identifiers.add(ids.openalex.lower())
         return identifiers
-
-
-# Notes
-#
-# Pass B. Every suggestion here originates from a real search result, never
-# from the model. The model is only allowed to select from candidates by index
-# and say why, so it cannot propose a paper that does not exist. That is the
-# same structural rule as the other passes, and it is the brief's hardest
-# requirement: a review must never invent a citation.
-#
-# is_linkable is then enforced before a suggestion survives. A candidate with
-# no DOI and no OpenAlex id is discarded even if the model liked it, because a
-# suggestion a researcher cannot open is not actionable and is indistinguishable
-# from a fabrication.
-#
-# Deduplication runs before the model is asked anything. Suggesting a paper the
-# author already cites is the fastest way to look useless, and identifiers make
-# that check exact where title matching would not be. It also saves tokens on
-# candidates that were never going to be reportable.
-#
-# The prompt insists on strictness for the same reason the claim pass insists
-# on conservatism. A literature search returns topically adjacent work by
-# design, and a reviewer that suggests five loosely related papers per claim
-# teaches the author to ignore the whole panel.
-#
-# Abstracts are truncated in the prompt because judging relevance needs the
-# gist, not the full text, and five untruncated abstracts per claim across a
-# dozen claims is a great deal of tokens for no extra accuracy.
-#
-# A search failure returns no suggestions rather than raising. Missing work is
-# the enhancement half of review; the support checks are the half grounded in
-# the paper's own bibliography, and an exhausted search quota should cost the
-# first without taking down the second.

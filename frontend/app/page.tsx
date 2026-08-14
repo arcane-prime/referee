@@ -1,55 +1,91 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import AgentPanel from "@/components/AgentPanel";
 import DocumentPanel from "@/components/DocumentPanel";
-import ExtractionPanel from "@/components/ExtractionPanel";
+import PaperBar from "@/components/PaperBar";
 import PdfUploader from "@/components/PdfUploader";
 import SplitPane from "@/components/SplitPane";
 import {
   CurrentDocument,
   ExtractionResult,
+  ResolutionResult,
   UploadedPaper,
+  extractPaper,
   getDocument,
+  resolvePaper,
 } from "@/lib/api";
+
+export type ParseState =
+  | { phase: "extracting" }
+  | { phase: "ready"; result: ExtractionResult }
+  | { phase: "failed"; message: string };
+
+export type ResolveState =
+  | { phase: "idle" }
+  | { phase: "checking" }
+  | { phase: "done"; result: ResolutionResult }
+  | { phase: "failed"; message: string };
+
+function messageOf(error: unknown): string {
+  return error instanceof Error ? error.message : "Something went wrong.";
+}
 
 export default function HomePage() {
   const [paper, setPaper] = useState<UploadedPaper | null>(null);
-  const [extraction, setExtraction] = useState<ExtractionResult | null>(null);
+  const [parse, setParse] = useState<ParseState>({ phase: "extracting" });
+  const [resolve, setResolve] = useState<ResolveState>({ phase: "idle" });
   const [current, setCurrent] = useState<CurrentDocument | null>(null);
   const [targeted, setTargeted] = useState<string[]>([]);
 
   const reset = useCallback(() => {
     setPaper(null);
-    setExtraction(null);
+    setParse({ phase: "extracting" });
+    setResolve({ phase: "idle" });
     setCurrent(null);
     setTargeted([]);
   }, []);
 
-  const onUploaded = useCallback((uploaded: UploadedPaper) => {
-    setExtraction(null);
-    setCurrent(null);
+  const runParse = useCallback(async (paperId: string) => {
+    setParse({ phase: "extracting" });
+    setResolve({ phase: "idle" });
     setTargeted([]);
-    setPaper(uploaded);
+
+    let extraction: ExtractionResult;
+    try {
+      extraction = await extractPaper(paperId);
+    } catch (error) {
+      setParse({ phase: "failed", message: messageOf(error) });
+      return;
+    }
+
+    setParse({ phase: "ready", result: extraction });
+    setCurrent({
+      paper_id: extraction.paper_id,
+      revision: extraction.document.revision,
+      available_revisions: [extraction.document.revision],
+      document: extraction.document,
+    });
+
+    if (extraction.references.length === 0) {
+      setResolve({
+        phase: "failed",
+        message: "This paper has no references to check.",
+      });
+      return;
+    }
+
+    setResolve({ phase: "checking" });
+    try {
+      setResolve({ phase: "done", result: await resolvePaper(paperId) });
+    } catch (error) {
+      setResolve({ phase: "failed", message: messageOf(error) });
+    }
   }, []);
 
-  const onExtracted = useCallback(
-    (result: ExtractionResult | null) => {
-      setExtraction(result);
-      setTargeted([]);
-      setCurrent(
-        result === null
-          ? null
-          : {
-              paper_id: result.paper_id,
-              revision: result.document.revision,
-              available_revisions: [result.document.revision],
-              document: result.document,
-            },
-      );
-    },
-    [],
-  );
+  useEffect(() => {
+    if (paper) void runParse(paper.paper_id);
+  }, [paper, runParse]);
 
   const refresh = useCallback(async () => {
     if (!paper) return;
@@ -65,12 +101,13 @@ export default function HomePage() {
     return (
       <main className="page">
         <Header />
-        <PdfUploader onUploaded={onUploaded} />
+        <PdfUploader onUploaded={setPaper} />
       </main>
     );
   }
 
-  const ready = extraction !== null && current !== null;
+  const ready = parse.phase === "ready" && current !== null;
+  const verified = resolve.phase === "done";
 
   return (
     <main className={`page${ready ? " page--split" : ""}`}>
@@ -81,10 +118,11 @@ export default function HomePage() {
             Upload a different paper
           </button>
         </div>
-        <ExtractionPanel
+        <PaperBar
           paper={paper}
-          extracted={ready}
-          onExtracted={onExtracted}
+          parse={parse}
+          resolve={resolve}
+          onRetry={() => void runParse(paper.paper_id)}
         />
       </div>
 
@@ -94,7 +132,8 @@ export default function HomePage() {
           rightLabel="Review and edit"
           left={
             <DocumentPanel
-              extraction={extraction}
+              extraction={parse.result}
+              resolve={resolve}
               current={current}
               targetedBlocks={targeted}
             />
@@ -103,7 +142,8 @@ export default function HomePage() {
             <AgentPanel
               paperId={paper.paper_id}
               revision={current.revision}
-              verified={extraction.verification.succeeded}
+              verified={verified}
+              checking={resolve.phase === "checking"}
               onProposal={setTargeted}
               onApplied={() => void refresh()}
             />
@@ -122,36 +162,3 @@ function Header() {
     </header>
   );
 }
-
-/*
- Notes
-
- The journey the brief describes, in one screen: upload, see the parse, read
- the review, instruct an edit, approve it. Only the upload is a separate
- screen, because until a file exists there is nothing to show beside it.
-
- Two pieces of state that look similar are deliberately separate. `extraction`
- is a fact about the parse and never changes after it is produced; `current` is
- the manuscript, which every approved edit replaces. Merging them would mean
- re-running extraction to see the result of an edit, and that would call GROBID
- and the literature databases to rebuild a document already on disk.
-
- After an edit is applied the page re-reads the document rather than patching
- its own copy from the response. The server has just written a revision, and
- rebuilding the client's idea of the paper from anything other than that file
- is how the two come to disagree.
-
- `targeted` flows up from the edit panel and down into the manuscript, so the
- blocks a pending proposal would change are highlighted in the paper itself.
- The researcher sees which of their paragraphs an instruction selected before
- approving anything, which is the cheapest check on a planner that chose badly.
-
- The layout changes shape once a parse exists: a narrow reading column before,
- two independently scrolling panes after. Stacked, every comparison between a
- finding and the sentence it refers to costs a long scroll.
-
- Starting a new extraction clears the parse before the request goes out, so the
- agent pane cannot sit beside a manuscript that is being replaced. A request
- completing late would otherwise repopulate it with findings belonging to a
- different paper.
-*/

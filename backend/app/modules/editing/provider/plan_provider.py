@@ -20,7 +20,7 @@ SYSTEM = (
 PLAN_SCHEMA = {
     "type": "object",
     "additionalProperties": False,
-    "required": ["intent", "operations", "note"],
+    "required": ["intent", "scope", "note", "operations"],
     "properties": {
         "intent": {
             "type": "string",
@@ -40,7 +40,13 @@ PLAN_SCHEMA = {
             "items": {
                 "type": "object",
                 "additionalProperties": False,
-                "required": ["kind", "block_id"],
+                "required": [
+                    "kind",
+                    "block_id",
+                    "target_ratio",
+                    "instruction",
+                    "ref_id",
+                ],
                 "properties": {
                     "kind": {
                         "type": "string",
@@ -134,46 +140,3 @@ class PlanProvider:
                 )
 
         return "\n".join(lines)
-
-
-# Notes
-#
-# The planner selects targets. It does not write a single word that reaches the
-# paper. Its entire output is a small typed object, so a model that returns
-# nonsense produces a validation error rather than a damaged manuscript, and
-# there is no free-text field here that is later executed. `instruction` is
-# passed to the writer as guidance and is never applied to the document itself.
-#
-# Splitting planning from writing is what keeps this off the "one giant prompt"
-# path the brief warns about. This call sees the whole paper in outline and no
-# prose worth rewriting; the writer sees one paragraph and knows nothing about
-# the plan. Neither is in a position to do the other's damage.
-#
-# Blocks are offered as id, kind, citation count and a short preview rather
-# than full text. The planner is choosing where to work, and full prose would
-# cost tokens on every block in the paper to answer a question about which
-# handful of them matter.
-#
-# Operations naming a block that does not exist are dropped here rather than
-# failing the request. A model inventing "b_99" is a plan that cannot be run,
-# not a reason to lose the operations it got right, and the user sees what was
-# actually attempted.
-#
-# The schema pins `kind` to an enum matching the operation union in
-# domain/edit.py. That is what makes an unknown operation kind unreachable
-# rather than merely unlikely: with constrained decoding the model cannot emit
-# one, and without it validation refuses it.
-#
-# PLAN_MAX_TOKENS is raised above the default because this is the largest
-# prompt in the codebase and the model is a reasoning one. On gpt-oss the
-# reasoning tokens are drawn from the same completion budget as the answer, so
-# an outline of a hundred blocks produced enough reasoning to exhaust 2048
-# before a single character of JSON was emitted. The response came back well
-# formed and completely empty, which surfaced as "could not reach the model"
-# when the model had in fact answered. Settings also pin reasoning_effort low,
-# which cut the tokens spent thinking about a plan by roughly two thirds.
-#
-# MAX_OPERATIONS caps how much one command may change. "Rewrite my paper" is a
-# request this tool should decline to satisfy in a single unreviewable step,
-# and a bounded plan is also a bounded number of writer calls against a free
-# tier rate limit.

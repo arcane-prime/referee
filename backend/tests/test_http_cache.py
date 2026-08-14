@@ -82,24 +82,3 @@ class TestCacheBehaviour:
         cache.get("openalex", "missing")
 
         assert (cache.hits, cache.misses) == (1, 1)
-
-
-# Notes
-#
-# The cache is what makes this stage developable. OpenAlex meters a daily
-# budget of a thousand requests and one paper costs forty to eighty, so without
-# it a dozen debugging runs ends the day. These tests cover the properties that
-# decide whether it actually saves anything.
-#
-# Excluding mailto from the key is the one that would silently cost the most.
-# It identifies the caller and has no bearing on the answer, so keying on it
-# would discard the entire cache the moment anyone configures their own
-# address.
-#
-# Caching negative results matters for the same reason. References that resolve
-# to nothing are exactly the ones re-run most while tuning thresholds, and they
-# would otherwise burn quota on every attempt.
-#
-# The corrupt-entry test guards a failure mode worse than a miss: truncated
-# JSON parsing as no data at all. Every failure path here degrades to a miss,
-# because a cache should slow the system down when broken, never break it.

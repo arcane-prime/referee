@@ -41,20 +41,3 @@ class PaperProvider:
     @staticmethod
     def _new_paper_id() -> str:
         return f"{PAPER_ID_PREFIX}{uuid4().hex[:12]}"
-
-
-# Notes
-#
-# The PDF check reads the magic bytes rather than trusting the filename or the
-# browser-supplied content type. Both of those are attacker-controlled and
-# routinely wrong even when nobody is being hostile.
-#
-# The size limit is enforced here on the materialised bytes. FastAPI's
-# UploadFile spools large uploads to a temp file, so a very large request is
-# not held in memory before we reject it, but it is still transferred in full.
-# A streaming guard at the ASGI layer is the stricter fix and is deliberately
-# left out at this stage.
-#
-# This provider imports no web framework. It takes bytes, returns a DTO, and
-# raises domain errors, which is what makes it testable without a running
-# server.

@@ -84,35 +84,3 @@ class ResolutionProvider:
         if abstract:
             resolution.abstract = abstract
             resolution.abstract_source = self._abstracts.name
-
-
-# Notes
-#
-# The orchestrator owns the sequence and the concurrency, and nothing else. All
-# the judgement lives in MatcherProvider, all the network lives in the
-# backends, so this file stays readable as a description of the flow.
-#
-# A DOI, when present, short-circuits the search entirely: it is an exact
-# identifier, so a successful lookup needs no scoring. The sample paper had
-# none, but other papers will, and skipping a fuzzy match when an exact one is
-# available is both faster and safer.
-#
-# References are resolved concurrently behind a semaphore rather than
-# sequentially. Forty references at roughly a third of a second each is twelve
-# seconds serially, which is a long time to watch a spinner. The semaphore is
-# what keeps that from turning into forty simultaneous requests: OpenAlex's
-# polite pool is generous but it is a shared public service, and a burst is
-# how a client earns a rate limit.
-#
-# The abstract backfill runs only for resolved references. Asking a second
-# service for the abstract of a work we are not confident we identified would
-# spend a scarce rate limit on a record we may be about to discard, and could
-# attach a real abstract to a wrong match, which is worse than having none.
-#
-# Candidates are kept only when the outcome is ambiguous. On a resolved
-# reference they are noise; on an ambiguous one they are the entire point,
-# because the user is the one who decides and they need to see the options.
-#
-# Nothing here writes to disk. Resolution is recomputable from the stored TEI,
-# and the models are still moving, so persisting them now would mean migrating
-# them shortly. The HTTP cache and library.json are both deliberately deferred.

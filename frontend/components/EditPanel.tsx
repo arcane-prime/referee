@@ -340,37 +340,3 @@ function CitationSummary({ delta }: { delta: CitationDelta }) {
     </p>
   );
 }
-
-/*
- Notes
-
- The command box is the whole of stage 4's input. Everything else on this panel
- exists to let a researcher decide whether to accept what came back, which is
- the point the brief is most insistent about: the human stays in the loop.
-
- Every patch is shown as before and after rendered with the same component the
- manuscript uses, so citation chips in the diff are drawn by the same code that
- drew them in the paper. A citation that moved is visible as a chip in a
- different place rather than as a claim in a summary line.
-
- Patches start ticked and can be unticked. The alternative, starting unticked,
- reads as though the tool is unsure about its own output; the useful default is
- "apply what I asked for, minus anything I object to". The approved set is sent
- explicitly rather than relying on the server's "absent means all", because in
- a UI with checkboxes those two are only the same until someone unticks one.
-
- Refused operations get a card of their own rather than being hidden. If the
- model returned a rewrite that would have dropped [[c_4]], the researcher is
- told which block and why. An edit that quietly did less than it claimed is the
- exact failure this stage was built to prevent, so it would be perverse to hide
- the evidence that the guard worked.
-
- The panel reports when the agent cannot add citations at all, which happens
- when verification failed and the library holds nothing with an external id.
- Saying so before a command is issued is better than a refusal that looks like
- a bug.
-
- onProposal lifts the targeted block ids to the page so the manuscript pane can
- highlight them. The diff says what would change; the highlight says where in
- their paper it is.
-*/

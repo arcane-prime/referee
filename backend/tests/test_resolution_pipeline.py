@@ -185,32 +185,3 @@ class TestAgentSafety:
         discovered = reference.model_copy(update={"provenance": "fetched_from_api"})
 
         assert discovered.can_be_cited_by_the_agent is True
-
-
-# Notes
-#
-# These run the real orchestrator, the real matcher and the real OpenAlex
-# mapping, with only the HTTP call replaced by a stub. That is the payoff of
-# SearchBackend being a protocol returning domain objects: the whole stage is
-# exercised end to end with no network and no quota.
-#
-# It also means the suite is unaffected by OpenAlex's daily budget, which is a
-# real constraint. One paper costs forty to eighty requests against a free
-# thousand a day, so tests that hit the live API would exhaust it and then fail
-# for reasons unrelated to the code.
-#
-# The record fixture is a faithful copy of a real OpenAlex response, including
-# the three shapes that are easy to get wrong: the DOI and id arriving as URLs,
-# and the abstract arriving as an inverted index rather than as text. Mapping
-# is asserted through OpenAlexProvider._to_record rather than by hand, so the
-# production translation is what gets tested.
-#
-# test_csl_prefers_the_matched_record_over_our_parse is the one that
-# demonstrates why this stage exists at all. Our parse had no journal; the
-# resolved record does. That is output quality being decoupled from parser
-# quality, asserted rather than claimed.
-#
-# The TestAgentSafety pair guards the anti-hallucination rule structurally. A
-# reference scraped from the user's PDF can be resolved, carry a DOI and an
-# abstract, and still be ineligible for the agent to cite in stage 4, because
-# provenance records where it came from rather than how good it looks.

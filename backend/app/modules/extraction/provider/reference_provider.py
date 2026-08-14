@@ -162,33 +162,3 @@ class ReferenceProvider:
     def _target_url(self, entry: etree._Element) -> str | None:
         node = find(entry, ".//tei:ptr[@target]")
         return attr(node, "target")
-
-
-# Notes
-#
-# GROBID has already split the reference list into entries and parsed each into
-# fields, so this provider is a translator from its TEI shape into CSL-JSON,
-# not a bibliography parser.
-#
-# The raw string is taken from <note type="raw_reference">, which exists only
-# because the client asks for includeRawCitations. If it is somehow absent, the
-# entry's own text is used instead. `raw` is never allowed to be empty: an
-# entry whose fields failed to parse is still shown to the user verbatim and
-# still searchable as a single query string in stage 2. Dropping it is the
-# failure the brief explicitly prohibits.
-#
-# TEI distinguishes title levels: 'a' is the article, 'j' the journal, 'm' the
-# monograph. Which one is the work and which is the container depends on which
-# are present, which is what the title/container logic works out. A reference
-# with no article title is treated as a book rather than as an article with a
-# missing title.
-#
-# parsed is None only when there is nothing at all to record. That is distinct
-# from a poorly parsed reference, which still gets a CSLItem carrying whatever
-# was found. The difference surfaces through RawReference.parse_quality, which
-# is derived rather than stored, so nothing here has to form an opinion.
-#
-# Dates are matched on a four-digit year rather than parsed as a full date.
-# Bibliographies carry dates in wildly inconsistent forms, and the year is the
-# only part stage 2 scores on. An unparseable date is kept in CSLDate.raw
-# instead of being discarded.

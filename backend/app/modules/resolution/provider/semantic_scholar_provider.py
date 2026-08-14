@@ -174,32 +174,3 @@ class SemanticScholarProvider:
             return None
         cleaned = " ".join(abstract.split())
         return cleaned or None
-
-
-# Notes
-#
-# This provider plays two roles, and the split matters.
-#
-# Its primary role is the abstract fallback: OpenAlex omits abstracts for a
-# meaningful slice of the literature, and Semantic Scholar returns them as
-# plain text with no inverted index to rebuild.
-#
-# Its second role is as a standby search backend for when OpenAlex is
-# unavailable. That is not an invitation for two databases to vote on what a
-# reference is; the fallback chain uses exactly one source at a time, and only
-# reaches here when the primary cannot answer at all.
-#
-# The two services fail in genuinely different ways, which is what makes the
-# pairing worth having. OpenAlex meters a daily budget: once spent, every
-# request that day fails and waiting minutes is pointless. Semantic Scholar
-# rate limits a shared anonymous pool: a 429 usually clears within seconds. So
-# a burst here is retried with a short backoff, whereas an exhausted budget
-# there fails fast with the real reset time.
-#
-# Every failure path returns None rather than raising, because the caller can
-# always continue: a reference with no abstract is still resolved, and a
-# reference the standby could not find is honestly unresolved.
-#
-# Author names arrive as single display strings here too, so the same splitting
-# heuristic is reused from the OpenAlex provider rather than reimplemented, and
-# both sources therefore produce surnames the matcher can compare symmetrically.

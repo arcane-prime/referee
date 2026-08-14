@@ -1,5 +1,6 @@
 import asyncio
 
+from app.core.exceptions import SearchUnavailableError
 from app.domain.document import Document
 from app.domain.library import Reference
 from app.domain.review import Evidence, Finding, Sentence
@@ -14,6 +15,8 @@ from app.modules.review.provider.support_provider import SupportProvider
 PROBLEM_GRADES = {"not_supported", "partially_supports"}
 
 NON_CITING_BLOCK_KINDS = {"abstract", "caption", "heading", "formula"}
+
+DISCOVERY_BUDGET_SECONDS = 25.0
 
 
 class ReviewProvider:
@@ -151,9 +154,15 @@ class ReviewProvider:
                         sentence, already_cited
                     )
 
-            for sentence, suggestions in await asyncio.gather(
-                *(run(sentence) for sentence in claims)
-            ):
+            try:
+                found = await asyncio.wait_for(
+                    asyncio.gather(*(run(sentence) for sentence in claims)),
+                    timeout=DISCOVERY_BUDGET_SECONDS,
+                )
+            except (asyncio.TimeoutError, SearchUnavailableError):
+                found = []
+
+            for sentence, suggestions in found:
                 if suggestions:
                     suggestions_by_key[(sentence.block_id, sentence.index)] = suggestions
 
@@ -194,64 +203,3 @@ class ReviewProvider:
         if grade == "not_supported":
             return "The cited source appears to contradict this claim."
         return "The cited source only partially supports this claim."
-
-
-# Notes
-#
-# The orchestrator owns the sequence and the anchoring, and contains no
-# judgement of its own.
-#
-# Findings are only ever emitted for sentences that came out of
-# SentenceProvider, so every one carries a real block id, sentence index and
-# character span. The model chose which sentence, never what the sentence says.
-#
-# is_grounded is enforced as the last step of both passes, and it is the
-# brief's hardest rule made mechanical. An unsupported-claim finding survives
-# only if some evidence carries a verified quote; a missing-citation finding
-# survives only if some suggestion carries a real identifier. Anything else is
-# discarded rather than shown, however confident the model was.
-#
-# Only problem grades become findings. A citation the source supports is the
-# normal case and reporting it would bury the few that matter in noise.
-#
-# Evidence is grouped per sentence rather than per reference, because a
-# sentence citing three works is one claim to a reader, not three findings.
-# Severity follows the worst grade among them, since a contradiction alongside
-# two partial supports is still a contradiction.
-#
-# References with no abstract are skipped before any model call. There is
-# nothing to check against, and judging from a title is the behaviour the whole
-# design exists to prevent. Their absence is reported in the summary instead.
-#
-# The passes are independent and separately switchable, and they need
-# progressively more of the outside world:
-#
-#   uncited claims   the document alone, plus the model
-#   support checks   the paper's own bibliography, resolved with abstracts
-#   missing work     a live literature search
-#
-# That ordering is deliberate. A claim carrying no citation is detectable with
-# nothing but the paper's text, so the review degrades in useful steps rather
-# than failing outright when an external service is unavailable.
-#
-# When search is available an uncited claim is upgraded to a missing_citation
-# carrying real candidates; when it is not, the same sentence is still reported
-# as an uncited claim. The finding never pretends to know which work would
-# support it, so the honest weaker statement survives without inventing the
-# stronger one.
-#
-# Abstracts and captions are excluded from the uncited-claim pass entirely.
-# Academic convention is that abstracts do not carry citations, so every
-# factual sentence in one looks like a missing citation and none of them are.
-# On the first real paper this produced four findings out of twelve that an
-# author would rightly dismiss, which is the fastest way to teach them to
-# ignore the other eight as well.
-#
-# The exclusion is by block kind rather than by prompting, because it is a
-# property of the document rather than a judgement. Those blocks are still
-# checked by the support pass when they do carry a citation; it is only the
-# expectation of a citation that does not apply.
-#
-# Claims investigated for missing work are capped. A long paper has many
-# uncited claims, each costing a search and a judgement, and a reviewer that
-# returns forty suggestions is one nobody reads.
