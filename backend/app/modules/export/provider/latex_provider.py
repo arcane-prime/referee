@@ -1,3 +1,5 @@
+import unicodedata
+
 from app.domain.document import (
     Block,
     CiteNode,
@@ -21,11 +23,49 @@ ESCAPES = {
     "^": r"\textasciicircum{}",
 }
 
+SYMBOLS = {
+    "•": r"\textbullet{}",
+    "‐": "-",
+    "‑": "-",
+    "−": "-",
+    "–": "--",
+    "—": "---",
+    "‘": "`",
+    "’": "'",
+    "“": "``",
+    "”": "''",
+    "…": r"\ldots{}",
+    "†": r"\dag{}",
+    "‡": r"\ddag{}",
+    "→": r"\ensuremath{\rightarrow}",
+    "←": r"\ensuremath{\leftarrow}",
+    "↔": r"\ensuremath{\leftrightarrow}",
+    "≤": r"\ensuremath{\leq}",
+    "≥": r"\ensuremath{\geq}",
+    "≈": r"\ensuremath{\approx}",
+    "≠": r"\ensuremath{\neq}",
+    "×": r"\ensuremath{\times}",
+    "÷": r"\ensuremath{\div}",
+    "±": r"\ensuremath{\pm}",
+    "∞": r"\ensuremath{\infty}",
+    "∈": r"\ensuremath{\in}",
+    "∑": r"\ensuremath{\sum}",
+    "∏": r"\ensuremath{\prod}",
+    "√": r"\ensuremath{\sqrt{}}",
+    "°": r"\ensuremath{^\circ}",
+}
+
 SECTION_COMMANDS = {1: "section", 2: "subsection", 3: "subsubsection"}
 
 
+def fold(text: str) -> str:
+    folded = unicodedata.normalize("NFKC", text)
+    return "".join(SYMBOLS.get(character, character) for character in folded)
+
+
 def escape(text: str) -> str:
-    return "".join(ESCAPES.get(character, character) for character in text)
+    escaped = "".join(ESCAPES.get(character, character) for character in text)
+    return fold(escaped)
 
 
 def render_inline(node) -> str:
@@ -38,7 +78,7 @@ def render_inline(node) -> str:
         return "\\cite{" + ",".join(node.ref_ids) + "}"
 
     if isinstance(node, MathNode):
-        return f"${node.source}$"
+        return f"${fold(node.source)}$"
 
     if isinstance(node, XRefNode):
         return escape(node.label)
@@ -69,7 +109,8 @@ def render_block(block: Block) -> str:
 
 def render_section(section: Section) -> str:
     command = SECTION_COMMANDS.get(section.level, "paragraph")
-    parts = [f"\\{command}{{{escape(section.title)}}}"] if section.title else []
+    heading = section.title and not _is_self_titling(section)
+    parts = [f"\\{command}{{{escape(section.title)}}}"] if heading else []
 
     for block in section.blocks:
         rendered = render_block(block)
@@ -77,6 +118,11 @@ def render_section(section: Section) -> str:
             parts.append(rendered)
 
     return "\n\n".join(parts)
+
+
+def _is_self_titling(section: Section) -> bool:
+    kinds = {block.kind for block in section.blocks if block.inlines}
+    return kinds == {"abstract"}
 
 
 def render_document(
@@ -96,6 +142,7 @@ def render_document(
         [
             "\\documentclass[11pt]{article}",
             "\\usepackage[utf8]{inputenc}",
+            "\\usepackage[T1]{fontenc}",
             "\\usepackage{amsmath,amssymb}",
             "\\usepackage{hyperref}",
             "",

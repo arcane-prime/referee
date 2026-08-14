@@ -46,6 +46,21 @@ export default function PaperBar({
             />
           </div>
         </div>
+
+        {parse.phase === "extracting" && (
+          <p className="hint">
+            Reading the PDF and pulling out its structure and citations. A long
+            paper can take 30–60 seconds.
+          </p>
+        )}
+
+        {parse.phase === "ready" && resolve.phase === "checking" && (
+          <p className="hint">
+            Your paper is ready to read below. Each reference is now being looked
+            up in OpenAlex and Semantic Scholar, which takes another 30–60
+            seconds.
+          </p>
+        )}
       </div>
 
       {parse.phase === "failed" && (

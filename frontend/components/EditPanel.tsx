@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import ExportPanel from "@/components/ExportPanel";
 import { Inlines } from "@/components/InlineNodes";
 import {
   BlockPatch,
@@ -202,6 +203,8 @@ export default function EditPanel({
           onDiscard={() => setStatus({ phase: "idle" })}
         />
       )}
+
+      <ExportPanel paperId={paperId} revision={revision} />
     </div>
   );
 }

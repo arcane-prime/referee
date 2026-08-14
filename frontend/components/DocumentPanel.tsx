@@ -1,7 +1,6 @@
 "use client";
 
 import type { ResolveState } from "@/app/page";
-import ExportPanel from "@/components/ExportPanel";
 import { BlockView } from "@/components/InlineNodes";
 import {
   CurrentDocument,
@@ -206,8 +205,6 @@ export default function DocumentPanel({
           ))}
         </ol>
       </div>
-
-      <ExportPanel paperId={current.paper_id} revision={current.revision} />
 
       <div className="pane__end" aria-hidden="true" />
     </section>
