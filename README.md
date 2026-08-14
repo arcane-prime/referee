@@ -183,22 +183,31 @@ OpenAlex has a daily quota. Setting `OPENALEX_MAILTO` raises it substantially.
 
 ## How it works
 
-The design documents live in **[`design/`](design/)** — one per feature, plus
-`connection.md` for how they fit together.
+**Start with [higher-level-design.md](higher-level-design.md)** — the whole
+system in plain words, with a diagram.
+
+### The two system-design pieces
+
+| Piece | Where it is covered |
+|---|---|
+| **Citation parsing** — the pipeline, the intermediate representation, where CSL-JSON fits, how styles and failures are handled | [design/extraction.md](design/extraction.md) → [design/verification.md](design/verification.md) → [design/export.md](design/export.md) |
+| **The agent** — how a command becomes actions, how operations are planned and run, how OpenAlex and Semantic Scholar are called, how citations survive edits | [design/edit.md](design/edit.md) → [design/review.md](design/review.md) |
+
+### Everything else
 
 | Document | Covers |
 |---|---|
-| **[overview.md](design/overview.md)** | **start here** — the whole system in plain words, with a diagram |
-| [connection.md](design/connection.md) | how the parts fit together, in more detail |
-| [api.md](design/api.md) | every endpoint, its JSON, and the error catalogue |
-| [extraction.md](design/extraction.md) | PDF → structured document |
-| [verification.md](design/verification.md) | checking references against databases |
-| [review.md](design/review.md) | LLM peer review |
-| [edit.md](design/edit.md) | natural-language editing and citation safety |
-| [export.md](design/export.md) | LaTeX and CSL |
+| [higher-level-design.md](higher-level-design.md) | the whole system in plain words, with a diagram |
+| [api-design.md](api-design.md) | every endpoint, what it does, and its JSON |
+| [design/connection.md](design/connection.md) | how the parts fit together, in more detail |
+| [design/extraction.md](design/extraction.md) | PDF → structured document |
+| [design/verification.md](design/verification.md) | checking references against databases |
+| [design/review.md](design/review.md) | LLM peer review |
+| [design/edit.md](design/edit.md) | natural-language editing and citation safety |
+| [design/export.md](design/export.md) | LaTeX and CSL |
 
-Start with `overview.md`. If you only read one more after that, make it
-`edit.md` — the citation-safety mechanism is the most interesting part.
+If you only read one more after the overview, make it `design/edit.md` — the
+citation-safety mechanism is the most interesting part.
 
 ---
 

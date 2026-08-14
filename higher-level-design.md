@@ -246,10 +246,10 @@ easier to demo and worth much less.
 
 | Document | For |
 |---|---|
-| [connection.md](connection.md) | how the parts fit together, with more technical detail |
-| [api.md](api.md) | every endpoint, what it does, and its JSON |
-| [extraction.md](extraction.md) | how a PDF becomes a structured document |
-| [verification.md](verification.md) | how references are matched to real works |
-| [review.md](review.md) | how the AI review works and why it can be trusted |
-| [edit.md](edit.md) | the citation-safety mechanism in full |
-| [export.md](export.md) | LaTeX and citation formatting |
+| [connection.md](design/connection.md) | how the parts fit together, with more technical detail |
+| [api-design.md](api-design.md) | every endpoint, what it does, and its JSON |
+| [extraction.md](design/extraction.md) | how a PDF becomes a structured document |
+| [verification.md](design/verification.md) | how references are matched to real works |
+| [review.md](design/review.md) | how the AI review works and why it can be trusted |
+| [edit.md](design/edit.md) | the citation-safety mechanism in full |
+| [export.md](design/export.md) | LaTeX and citation formatting |
