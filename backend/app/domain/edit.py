@@ -98,10 +98,6 @@ class RevisionProposal(BaseModel):
     def is_empty(self) -> bool:
         return not self.patches
 
-    @property
-    def loses_citations(self) -> bool:
-        return bool(self.citations.removed)
-
 
 class AppliedRevision(BaseModel):
     paper_id: str

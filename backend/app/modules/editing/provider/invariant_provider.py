@@ -1,4 +1,4 @@
-from app.domain.document import CiteNode, Document, Inline
+from app.domain.document import CiteNode, Inline
 from app.domain.edit import COUNT_RULES, CitationDelta, OperationKind
 from app.domain.library import Library
 
@@ -78,10 +78,6 @@ def check_citable(library: Library, ref_id: str) -> None:
             f"a database, so there is no verified record behind it and the agent "
             f"may not cite it."
         )
-
-
-def document_delta(before: Document, after: Document) -> CitationDelta:
-    return compare(before.ref_id_counts(), after.ref_id_counts())
 
 
 def _describe(delta: CitationDelta) -> str:

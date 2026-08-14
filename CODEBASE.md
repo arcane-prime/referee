@@ -3,8 +3,8 @@
 Every route, every provider, every function — what it does and why it exists.
 Written to be read top to bottom the first time, then used as a lookup.
 
-For the product brief see `PROJECT_CONTEXT.md`. For current status and setup
-see `HANDOFF.md`.
+For the product brief see `PROJECT_CONTEXT.md`. For how to run it see
+`README.md`.
 
 ---
 

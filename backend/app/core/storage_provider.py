@@ -28,9 +28,6 @@ class StorageProvider:
     def library_path(self, paper_id: str) -> Path:
         return self.paper_dir(paper_id) / LIBRARY_FILENAME
 
-    def exists(self, paper_id: str) -> bool:
-        return self.original_path(paper_id).is_file()
-
     def save_original(self, paper_id: str, content: bytes) -> Path:
         return self._write_bytes(self.original_path(paper_id), content)
 

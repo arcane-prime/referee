@@ -148,7 +148,3 @@ class Library(BaseModel):
     @property
     def ids(self) -> set[str]:
         return {ref.id for ref in self.references}
-
-    @property
-    def dois(self) -> set[str]:
-        return {ref.doi.lower() for ref in self.references if ref.doi}

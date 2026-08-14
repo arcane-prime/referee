@@ -66,12 +66,6 @@ export interface CSLItem {
   DOI: string | null;
 }
 
-export interface RawReference {
-  id: string;
-  raw: string;
-  parsed: CSLItem | null;
-}
-
 export interface ExtractionSummary {
   section_count: number;
   block_count: number;
