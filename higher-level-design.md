@@ -242,6 +242,269 @@ easier to demo and worth much less.
 
 ---
 
+# The two system-design pieces
+
+The assessment asks for the design of two things specifically. Both are written
+out here end to end.
+
+---
+
+## Piece 1 — Citation parsing
+
+**The job:** turn a PDF into citations that are structured, normalised, and
+checkable — handling more than one citation style, and surfacing what could not
+be parsed rather than dropping it.
+
+### The pipeline
+
+```
+   PDF file
+      │
+      │  GrobidProvider          send the PDF to GROBID
+      ▼
+   TEI XML                       structured but generic markup
+      │
+      ├─ TeiProvider ──────────► walks the XML, builds sections and paragraphs
+      │     │
+      │     └─ InlineProvider ─► the hard part: turns mixed text+tags into
+      │                          a LIST OF NODES, absorbing stray brackets
+      │
+      └─ ReferenceProvider ────► reads the bibliography into CSL-JSON
+      │
+      ▼
+   Document (rev_0.json)  +  RawReference[]
+      │
+      │  StyleProvider           IEEE / APA / Nature / unknown
+      ▼
+      │
+      │  ── separate request ──
+      │
+      │  OpenAlexProvider        search by DOI, else by title
+      │  SemanticScholarProvider fallback + abstracts
+      │  MatcherProvider         score 0-1, decide, collapse duplicates
+      ▼
+   Reference[] (library.json)    now carrying real DOIs and abstracts
+      │
+      │  bibliography_provider   citeproc + a real .csl file
+      ▼
+   formatted citations           "[12]" or "(Smith, 2019)"
+```
+
+### The intermediate representation
+
+This is the part that matters. **A paragraph is a list of nodes, not a string.**
+
+```
+Block
+ └── inlines[]
+       TextRun    ordinary prose — the only thing an AI may write
+       CiteNode   points at reference ids. Holds NO printed text
+       XRefNode   a figure, table or equation reference
+       MathNode   a formula
+```
+
+The printed marker `[12]` is stored **nowhere**. It exists only in
+`raw_marker`, kept as a record of what the page said, and is regenerated at
+display and export time.
+
+Two consequences fall out of this, and both are why the model is shaped this
+way rather than as text:
+
+- an AI rewriting prose cannot delete a citation, because the citation was
+  never part of the prose it was handed
+- citation preservation becomes **countable** — `ref_id_counts()` returns
+  `{ref_id: times cited}`, so "did this edit break anything?" is arithmetic
+  rather than judgement
+
+### Where CSL-JSON fits
+
+`CSL-JSON` is the single canonical shape for citation data. Everything becomes
+a `CSLItem`:
+
+```
+scraped out of the user's PDF   ──┐
+                                  ├──► CSLItem ──► citeproc + .csl ──► printed
+fetched from OpenAlex / S2      ──┘
+```
+
+The renderer never needs to know where a reference came from. No string
+template anywhere in the codebase formats a citation — which is why the same
+paper prints as IEEE, APA or Nature with no change to the stored data.
+
+### Handling styles
+
+`StyleProvider` samples the in-text markers and classifies them as numbered
+(`[12]`) or author-year (`(Smith, 2019)`), returning a style plus a confidence.
+
+Below the confidence threshold it returns **`unknown`** rather than guessing,
+and the user picks at export time. A wrong guess is worse than an honest "I do
+not know", because the user cannot tell it happened.
+
+### Handling failures
+
+Nothing is ever dropped silently:
+
+| Failure | What happens |
+|---|---|
+| A reference whose fields would not parse | `raw` string kept verbatim, shown to the user, still searchable |
+| A citation marker matching no bibliography entry | counted as **unlinked** and reported |
+| A reference not found in any database | status `unresolved`, with a plain-English reason |
+| A reference found but with no abstract | flagged; claims against it are skipped, not guessed |
+| A citation style that is not clear | reported as `unknown` |
+
+The delimiter problem is worth naming because it is where most of the
+engineering went. GROBID marks `[12]` as just `12` inside a `<ref>` tag,
+leaving the brackets outside as ordinary text. Left alone, the prose would
+contain stray `[` and `]` that an AI edit could move or delete.
+`InlineProvider` absorbs them into the citation node, and merges `[12, 13]` —
+which GROBID reports as two separate refs with a comma between — back into one
+citation act. On the test paper this yields **0 stray brackets across 58
+citations**.
+
+---
+
+## Piece 2 — The agent
+
+**The job:** turn a plain-English command into changes the user approves, and
+review the paper against real sources — without ever inventing a citation or
+damaging one.
+
+### How a command becomes actions
+
+```
+   "make the introduction shorter"
+      │
+      ▼
+   PlanProvider  ── LLM call #1 ──────────────────────────────────┐
+      │   sees:   the paper as an OUTLINE (block ids, kinds,       │
+      │           citation counts, short previews)                 │
+      │   returns: typed operations. NO PROSE.                     │
+      │                                                            │
+      ▼                                                            │
+   EditPlan                                                        │
+      [ {shorten_block, s0.p3, 0.7}, {shorten_block, s0.p4, 0.7} ] │
+      │                                                            │
+      │  for each operation:                                       │
+      ▼                                                            │
+   ┌──────────────────────────────────────────────────────┐        │
+   │  deflate()      citations → opaque tokens [[c_4]]     │        │
+   │       ▼                                               │        │
+   │  WriterProvider ── LLM call #2 ───────────────────────┼────────┘
+   │       │   sees:   ONE paragraph, tokens only          │
+   │       │   knows:  nothing about the document,         │
+   │       │           the library, or the plan            │
+   │       ▼                                               │
+   │  inflate()      original citation objects put back    │
+   │       │         where the tokens landed               │
+   │       ▼                                               │
+   │  GUARD 1  tokens in == tokens out?  else REFUSE       │
+   │  GUARD 2  ref_id counts obey this operation's rule?   │
+   └──────────────────────────────────────────────────────┘
+      │
+      ▼
+   RevisionProposal        before/after per block. NOTHING WRITTEN.
+      │
+      ▼
+   user ticks the changes they want
+      │
+      ▼
+   apply()  re-verifies against disk:
+             1. base revision still current?
+             2. each block still holds exactly what the patch assumed?
+             3. counts still obey the rule?
+      │
+      ▼
+   rev_N+1.json            rev_N untouched
+```
+
+**Two narrow LLM calls, never one big prompt.** The planner picks targets and
+writes no prose. The writer sees one paragraph and knows nothing else. Neither
+is in a position to do the other's damage.
+
+### The rules each operation must obey
+
+| Operation | Allowed effect on citation counts |
+|---|---|
+| `shorten_block` | **identical** — nothing added or removed |
+| `rewrite_block` | **identical** |
+| `add_citation` | may only **increase**, and only from the library |
+| `delete_block` | may decrease, but every lost reference is **named** in the preview |
+
+An operation with no declared rule is refused rather than defaulted. "May this
+silently drop citations?" is not a question anyone gets to leave blank.
+
+### How peer review works
+
+Three passes, deliberately independent, each needing more of the outside world
+than the last:
+
+```
+   Document
+      │
+      │  SentenceProvider     sentences derived IN CODE, with character
+      │                       offsets and the citations that fall inside them
+      ▼
+   Sentence[]
+      │
+      ├──► PASS A  ClaimProvider    which sentences state a fact but cite nothing?
+      │              answers with INDEXES into a batch, never with text
+      │
+      ├──► PASS C  SupportProvider  does the cited abstract support this claim?
+      │              returns QUOTE + GRADE together
+      │                    │
+      │                    ▼
+      │              quote_is_verbatim()  ← checked in PYTHON, not trusted
+      │                    │
+      │              fails → grade forced to "insufficient_evidence"
+      │
+      └──► DISCOVERY  search OpenAlex / S2 for works a claim should cite
+                     candidates come from the DATABASE; the model only filters
+      │
+      ▼
+   Finding[]  ── final gate: is_grounded ──► anything without a verified quote
+                                              or a real source id is DISCARDED
+```
+
+**Sentences are derived in code, not chosen by the model.** That is why every
+finding carries a real block id, sentence index and character span — a finding
+can always be traced back to text that actually exists.
+
+### How the databases are called
+
+```
+   Reference
+      │
+      ├─ has a DOI? ──yes──► find_by_doi()          exact, done
+      │
+      └─ no ──► search(title)
+                   │
+                   ├─ OpenAlex        primary, free, no key
+                   └─ Semantic Scholar fallback when OpenAlex finds nothing
+                                       or is out of quota
+                   │
+                   ▼
+              MatcherProvider  title 0.60 + authors 0.25 + year 0.15
+                               ≥ 0.82 accept · ≥ 0.55 ambiguous · else unresolved
+                               must beat runner-up by 0.04
+                               collapse preprint + published duplicates
+                   │
+                   ▼
+              abstract missing? ──► Semantic Scholar backfill
+```
+
+Bounded concurrency (3 at a time), a disk cache keyed on the request, and a
+75-second budget on the whole step. Every response is cached, so re-running
+costs nothing and a demo is repeatable.
+
+### How citations survive, in one line
+
+The model is handed prose with the citations replaced by tokens it cannot read,
+and code puts the real citation objects back where those tokens ended up — so
+an edit that damages a citation is not something we detect and fix, it is
+something the pipeline cannot express.
+
+---
+
 ## Where to read next
 
 | Document | For |
