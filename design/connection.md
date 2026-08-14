@@ -1,4 +1,4 @@
-# Connection — how the five stages work together
+# Connection - how the five stages work together
 
 Read the other five documents for each feature on its own. This one is about
 what happens between them: what calls what, what is written to disk, what
@@ -35,9 +35,9 @@ Steps 4, 5 and 6 are independent of each other. All three read from disk.
 ```
 backend/data/
     papers/paper_9d9b776178a4/
-        original.pdf      the upload — written once, never rewritten
+        original.pdf      the upload - written once, never rewritten
         grobid.tei.xml    exactly what the parser returned
-        library.json      every reference ever known — append-only
+        library.json      every reference ever known - append-only
         rev_0.json        the extracted document
         rev_1.json        after the first approved edit
         rev_2.json        after the second
@@ -60,7 +60,7 @@ still there to download.
 Export takes a revision number, so you can export the paper as it was before an
 edit and diff the two files.
 
-**`library.json` is append-only.** Once a work is in it, it stays — even if the
+**`library.json` is append-only.** Once a work is in it, it stays - even if the
 edit that introduced it was rejected. Otherwise a revision could end up pointing
 at a reference that vanished.
 
@@ -71,7 +71,7 @@ at a reference that vanished.
 Everything in `app/domain/` is pure Pydantic with **zero I/O**. No module owns
 these; every module speaks them.
 
-### `Document` — the paper
+### `Document` - the paper
 
 ```
 Document
@@ -81,7 +81,7 @@ Document
 ```
 
 A `CiteNode` holds `ref_ids` pointing into the library. **The characters `[12]`
-exist nowhere in stored data** — they are produced at render time, by the UI as
+exist nowhere in stored data** - they are produced at render time, by the UI as
 a chip and by citeproc at export.
 
 `Document.ref_id_counts()` returns `{ref_id: times cited}`. Two different
@@ -92,7 +92,7 @@ features read the document through this one function:
 
 They therefore cannot disagree about what the paper cites.
 
-### `Reference` and `Library` — the bibliography
+### `Reference` and `Library` - the bibliography
 
 ```
 RawReference     what extraction read off the page
@@ -105,7 +105,7 @@ Reference        that entry after resolution tried to find it in a database
 
 `Reference.csl` is the single place downstream code reads bibliographic data
 from. It returns the matched database record when resolved, and falls back to
-our own parse otherwise — which is what decouples output quality from parser
+our own parse otherwise - which is what decouples output quality from parser
 quality.
 
 `Reference.can_be_cited_by_the_agent` is the anti-fabrication gate, and it is a
@@ -137,7 +137,7 @@ The dependency rules, and the one exception:
 
 - **Nothing imports a feature module's provider from another feature module**,
   except where a stage genuinely operates on another's output.
-- `resolution` calls `extraction.load_references()` — one narrow, read-only
+- `resolution` calls `extraction.load_references()` - one narrow, read-only
   method. Resolution works on extraction's output by definition, and letting it
   parse TEI itself would create a second implementation of "what are this
   paper's references".
@@ -161,15 +161,15 @@ Four `Protocol` interfaces, so no module names a vendor.
 
 | Protocol | Real implementation | How tests avoid it |
 |---|---|---|
-| `ParserBackend` | `GrobidProvider` | **bypassed** — tests start from a committed TEI fixture |
+| `ParserBackend` | `GrobidProvider` | **bypassed** - tests start from a committed TEI fixture |
 | `SearchBackend` | `OpenAlexProvider` + fallback | `StubSearch` returns hand-written `SourceRecord`s |
 | `AbstractBackend` | `SemanticScholarProvider` | `StubAbstracts` |
 | `LlmBackend` | `OpenAiProvider` | `StubLlmProvider`, also wired in when no API key is set |
 
 Three of those four have a real stand-in class implementing the same shape. The
 parser is the exception: there is no fake `GrobidProvider`. The extraction tests
-read `tests/fixtures/numbered.tei.xml` — genuine GROBID output, committed and
-treated as source — and call `TeiProvider` directly, so the parser layer is
+read `tests/fixtures/numbered.tei.xml` - genuine GROBID output, committed and
+treated as source - and call `TeiProvider` directly, so the parser layer is
 never entered.
 
 The protocol still earns its place: it is why swapping parsers would touch one
@@ -199,7 +199,7 @@ Combined, the user stared at a spinner for 36 seconds with a finished parse
 sitting on the server. Split, the manuscript appears in under half a second and
 the verification panel fills in underneath.
 
-The frontend fires them in sequence automatically — there is no Extract button,
+The frontend fires them in sequence automatically - there is no Extract button,
 because there was never a decision behind it.
 
 This also changes what failure means. `extract` failing means there is nothing
@@ -234,7 +234,7 @@ after  :  16.3s   (no discovery)
 
 ## The one thread running through all of it
 
-Citations are nodes, never text — and that single decision pays off five times:
+Citations are nodes, never text - and that single decision pays off five times:
 
 | Stage | What it buys |
 |---|---|
@@ -247,7 +247,7 @@ Citations are nodes, never text — and that single decision pays off five times
 The rule stated once, in `domain/document.py`, and enforced everywhere after:
 
 > **The LLM writes `TextRun` content and nothing else.** Every other inline is
-> selected, moved, or removed with the user's approval — never authored.
+> selected, moved, or removed with the user's approval - never authored.
 
 ---
 
@@ -264,7 +264,7 @@ Each stage degrades rather than cascading:
 | Model rate limits | the affected pass reports it; the parse is untouched |
 
 Every failure is reported in words a researcher can act on, and the error shape
-is always `{code, detail}` — `code` to branch on, `detail` to display.
+is always `{code, detail}` - `code` to branch on, `detail` to display.
 
 Time budgets bound the two places that depend on outside services:
 `verification_budget_seconds` (75s) for resolution, `DISCOVERY_BUDGET_SECONDS`
@@ -277,10 +277,10 @@ wait and an honest message.
 
 One screen after upload, split into two panes:
 
-- **Left — the manuscript.** The parse at the current revision, with citation
+- **Left - the manuscript.** The parse at the current revision, with citation
   chips, a revision badge, the verification panel, the reference list, and the
   export control. Blocks a pending edit would touch are highlighted here.
-- **Right — the agent.** Two tabs: *Peer review* and *Edit*.
+- **Right - the agent.** Two tabs: *Peer review* and *Edit*.
 
 The panes scroll independently, because the parse and the review are read
 against each other and a single column costs a long scroll per comparison.
@@ -294,5 +294,5 @@ disagree.
 
 `InlineNodes.tsx` renders citation chips for **both** the manuscript and the
 edit diff. One renderer, so a chip in the diff is drawn by the same code that
-drew it in the paper — which is what makes a proposed change comparable to the
+drew it in the paper - which is what makes a proposed change comparable to the
 text it replaces.

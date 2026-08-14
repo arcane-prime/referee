@@ -87,7 +87,7 @@ export default function DocumentPanel({
         <p className="hint">
           Detected style: <strong>{summary.detected_style}</strong>{" "}
           {summary.detected_style === "unknown"
-            ? "— pick one manually before exporting."
+            ? "- pick one manually before exporting."
             : `(confidence ${summary.style_confidence})`}
         </p>
       </div>
@@ -100,7 +100,7 @@ export default function DocumentPanel({
             {targeted.size} paragraph(s) would change
           </p>
           <p className="hint">
-            Highlighted below. Nothing has been written yet — approve the
+            Highlighted below. Nothing has been written yet - approve the
             changes on the right to create revision {current.revision + 1}.
           </p>
         </div>
@@ -171,7 +171,7 @@ export default function DocumentPanel({
         <p className="panel__title">Parsed document</p>
         <p className="hint">
           Citations are separate nodes, not text. Each chip below is a link to a
-          reference — the markers never exist inside the editable prose.
+          reference - the markers never exist inside the editable prose.
         </p>
         {document.sections.map((section) => (
           <div key={section.id} className="section">

@@ -1,4 +1,4 @@
-# Edit — changing the paper with natural-language commands
+# Edit - changing the paper with natural-language commands
 
 **Module:** `backend/app/modules/editing/`
 **Routes:** `GET /papers/{id}/document`, `POST /papers/{id}/edit/plan`,
@@ -8,8 +8,8 @@
 
 ## What this feature does
 
-The researcher types an instruction in plain English — *"make the introduction
-shorter"* — and gets back a set of proposed changes, shown as before/after per
+The researcher types an instruction in plain English - *"make the introduction
+shorter"* - and gets back a set of proposed changes, shown as before/after per
 paragraph. Nothing is written until they approve it. On approval a new revision
 is saved and the old one is kept.
 
@@ -57,7 +57,7 @@ The model returns shortened prose, keeping the tokens:
 ```
 
 Inflate: split on the tokens and rebuild the list using **the original node
-objects** — same id, same `ref_ids`, same coordinates.
+objects** - same id, same `ref_ids`, same coordinates.
 
 The model chose *where* `[[c_4]]` sits. It could not touch *what* `[[c_4]]` is.
 
@@ -65,7 +65,7 @@ The model chose *where* `[[c_4]]` sits. It could not touch *what* `[[c_4]]` is.
 
 1. **A citation cannot be reworded, retargeted or invented.** It was never text
    in the model's input, so there is nothing for it to get wrong.
-2. **A citation follows its claim** when prose shrinks — which the brief
+2. **A citation follows its claim** when prose shrinks - which the brief
    requires. A citation frozen in place would end up beside a sentence that no
    longer exists.
 3. **A dropped citation is detectable.** Compare the tokens sent with the
@@ -75,7 +75,7 @@ The model chose *where* `[[c_4]]` sits. It could not touch *what* `[[c_4]]` is.
 
 If the model returns text with a token missing, duplicated, or invented, the
 operation is **rejected**. We do not put the citation back where we think it
-belongs — that would be guessing at intent. The user is told which markers were
+belongs - that would be guessing at intent. The user is told which markers were
 lost, for which paragraph.
 
 ---
@@ -91,7 +91,7 @@ it before and after:
 
 | Operation | Allowed change |
 |---|---|
-| `shorten_block`, `rewrite_block` | **identical** — nothing added or removed |
+| `shorten_block`, `rewrite_block` | **identical** - nothing added or removed |
 | `add_citation` | may only **increase** |
 | `delete_block` | may decrease, but every lost id is named in the diff |
 
@@ -113,15 +113,15 @@ def can_be_cited_by_the_agent(self) -> bool:
 
 The agent may only cite a work that came back from OpenAlex or Semantic Scholar
 carrying a real external id. **A fabricated citation cannot satisfy that check
-no matter what the model writes** — an invented id is not in the library, and a
+no matter what the model writes** - an invented id is not in the library, and a
 reference merely parsed from the user's own PDF has provenance
 `parsed_from_pdf` and fails the second half.
 
 ---
 
-## Where the LLM sits — two small calls, not one big prompt
+## Where the LLM sits - two small calls, not one big prompt
 
-**1. The planner** — command in, typed plan out. It chooses *targets*. It
+**1. The planner** - command in, typed plan out. It chooses *targets*. It
 writes no prose.
 
 ```
@@ -130,7 +130,7 @@ writes no prose.
     operations: [ {kind: shorten_block, block_id: "s0.p0", target_ratio: 0.7} ]
 ```
 
-**2. The writer** — one call per block. Token text in, token text out. It sees a
+**2. The writer** - one call per block. Token text in, token text out. It sees a
 single paragraph and knows nothing about the document, the library, or the plan.
 
 Everything else is ordinary code: resolving which blocks, deflating and
@@ -140,7 +140,7 @@ inflating, running the invariants, building the diff, writing the revision.
 
 ## The files, and what each one does
 
-### `provider/placeholder_provider.py` — the safety core
+### `provider/placeholder_provider.py` - the safety core
 
 Pure functions. No network, no model, no I/O.
 
@@ -158,7 +158,7 @@ checks are ordered by how much damage each represents: **missing** (a citation
 would be dropped), **invented** (fabrication wearing our syntax), **duplicated**
 (one citation would become two).
 
-The token carries the node's own id, not an index — an index would be stable
+The token carries the node's own id, not an index - an index would be stable
 only until something reordered, and a mismatch would then be silently wrong
 instead of loudly wrong.
 
@@ -166,7 +166,7 @@ instead of loudly wrong.
 be impossible, but the whole guarantee is keyed on ids, so the one case that
 would break it silently is checked rather than assumed.
 
-### `provider/invariant_provider.py` — the audit
+### `provider/invariant_provider.py` - the audit
 
 | Function | What it does |
 |---|---|
@@ -181,10 +181,10 @@ citing it once are different claims about the paper.
 
 `COUNT_RULES` lives in `domain/edit.py`, next to the operations, so adding an
 operation forces a decision about what it may do to citations. An operation with
-no rule is **refused**, not defaulted — "may this drop citations?" is not a
+no rule is **refused**, not defaulted - "may this drop citations?" is not a
 question anyone should get to leave blank.
 
-### `provider/operation_provider.py` — the typed operations
+### `provider/operation_provider.py` - the typed operations
 
 Pure functions from a block to a `BlockPatch`. Every one runs both guards
 before returning.
@@ -213,7 +213,7 @@ source at a time keeps each insertion individually reviewable.
 | `_prompt()` | build the block outline shown to the model |
 | `_clean()` | drop null fields before validation |
 
-Blocks are offered as id, kind, citation count and a short preview — not full
+Blocks are offered as id, kind, citation count and a short preview - not full
 prose. The planner is choosing *where* to work.
 
 Operations naming a block that does not exist are dropped rather than failing
@@ -234,7 +234,7 @@ prompt in the codebase.
 | `rewrite()` | apply a free-text instruction to one paragraph |
 | `_write()` | the actual model call |
 
-The system prompt asks it to preserve markers — but **nothing depends on it
+The system prompt asks it to preserve markers - but **nothing depends on it
 obeying**. The prompt is a request; the round-trip check is the guarantee.
 
 One rule guards something the marker check cannot see: *"do not write citations
@@ -245,7 +245,7 @@ text.
 The word target is computed in code, because models handle "about 40 words"
 better than "70% of the original length".
 
-### `provider/edit_provider.py` — the orchestrator
+### `provider/edit_provider.py` - the orchestrator
 
 | Function | What it does |
 |---|---|
@@ -270,7 +270,7 @@ input. Three things are verified:
 
 1. the base revision still matches (nothing changed underneath)
 2. every targeted block still holds **exactly** the inlines the patch was
-   computed from — a full structural comparison, not a hash
+   computed from - a full structural comparison, not a hash
 3. the citation counts still satisfy the operation's rule
 
 A tampered `after` list that dropped a citation fails check 3. A stale proposal
@@ -294,12 +294,12 @@ assigned.
 old one, so undo is pointing at a smaller number rather than a reverse operation
 that has to be correct. The original PDF is never rewritten at all.
 
-The latest revision is read off the directory rather than tracked in a counter —
+The latest revision is read off the directory rather than tracked in a counter -
 the files are the truth.
 
 ---
 
-## The domain models — `domain/edit.py`
+## The domain models - `domain/edit.py`
 
 | Model | What it is |
 |---|---|
@@ -344,9 +344,9 @@ a researcher can accept two changes and drop the third.
 The safety core is pure, so all of it is tested offline in under a second.
 The load-bearing tests:
 
-- `test_the_model_never_sees_a_ref_id` — asserts the negative the design rests on
+- `test_the_model_never_sees_a_ref_id` - asserts the negative the design rests on
 - round trip with no change rebuilds the block **exactly**
-- `inflate` reuses the **original node objects** (checks identity, not equality —
+- `inflate` reuses the **original node objects** (checks identity, not equality -
   an equal-looking rebuilt node would pass while proving the opposite)
 - a citation may move and keeps its `ref_ids`
 - dropped / invented / duplicated markers each raise, naming the marker

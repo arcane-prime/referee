@@ -1,4 +1,4 @@
-# Export — turning the document back into a paper
+# Export - turning the document back into a paper
 
 **Module:** `backend/app/modules/export/`
 **Routes:** `GET /papers/{id}/export`, `GET /papers/{id}/export.tex`
@@ -11,12 +11,12 @@ Takes any revision of the paper and writes it out as a LaTeX file, with every
 citation as a real `\cite{}` command and a bibliography formatted by citeproc
 from an official CSL stylesheet.
 
-The `.tex` compiles to a PDF with **one `pdflatex` run** — no BibTeX step,
+The `.tex` compiles to a PDF with **one `pdflatex` run** - no BibTeX step,
 because the bibliography is embedded in the file.
 
 ---
 
-## LaTeX, not PDF — and why
+## LaTeX, not PDF - and why
 
 The brief asks for exactly this:
 
@@ -26,7 +26,7 @@ The brief asks for exactly this:
 
 The round trip is **structure-preserving, not pixel-preserving**. You get the
 title, authors, sections, prose, formulas and every citation. You do not get the
-original two-column layout or the figures — those were never in the parse to
+original two-column layout or the figures - those were never in the parse to
 begin with.
 
 ---
@@ -44,7 +44,7 @@ This is the promise the whole codebase was built around, stated in
 Until this module existed, the second half of that was aspirational. Now it is
 true.
 
-**The proof** — same reference, one data model, three stylesheets:
+**The proof** - same reference, one data model, three stylesheets:
 
 ```
   ieee: [27]A. H. Schatz and L. B. Wahlbin, "Interior Maximum-Norm Estimates…",
@@ -112,14 +112,14 @@ the `CSLItem` carried. The id is the citation key the `\cite{}` commands use, so
 it has to match the document's `ref_ids` exactly.
 
 **A reference whose parse failed still gets an entry**, using its raw string as
-the title. Dropping it would leave a `\cite` in the body pointing at nothing —
+the title. Dropping it would leave a `\cite` in the body pointing at nothing -
 the one failure the brief explicitly prohibits. Printing the verbatim string is
 ugly and honest: the reader sees exactly what was on the page.
 
 **Keys and rendered entries are zipped with `strict=True`.** citeproc returns a
 list positionally, so if it ever emitted a different number of entries than it
 was given items, a lenient zip would pair every key after that point with the
-wrong reference — a bibliography that looks perfect and is wrong. Nothing
+wrong reference - a bibliography that looks perfect and is wrong. Nothing
 downstream could detect that, so raising is the only safe answer.
 
 ### `provider/latex_provider.py`
@@ -145,7 +145,7 @@ Turning the document into LaTeX. Pure functions, no decisions.
 | `XRefNode` | its label as plain text |
 
 **Escaping runs over `TextRun` content only.** `MathNode.source` came out of a
-`<formula>` element and is already LaTeX — escaping it would turn a formula into
+`<formula>` element and is already LaTeX - escaping it would turn a formula into
 a printed backslash. This is the one place the exporter trusts its input.
 
 The backslash substitution is in the **same pass** as the others. Doing it first
@@ -180,7 +180,7 @@ on disk and can be repeated without cost or risk.
 
 **Any revision can be exported**, not just the latest. Revisions are
 append-only, so "give me the paper before I accepted that edit" is a parameter
-rather than an undo — and a researcher can diff two exports to see exactly what
+rather than an undo - and a researcher can diff two exports to see exactly what
 an instruction changed.
 
 **Only cited references reach the bibliography.** The library is append-only and
@@ -188,7 +188,7 @@ accumulates every work the agent ever discovered, including ones from proposals
 the user rejected. A bibliography listing works the paper does not cite would be
 wrong in a way that is hard to notice.
 
-`_cited_ids()` is derived from `ref_id_counts()` — the same function the edit
+`_cited_ids()` is derived from `ref_id_counts()` - the same function the edit
 invariant uses to prove citations survived. The bibliography and the safety
 check read the document through **one definition** of "what does this paper
 cite", so they cannot disagree.
@@ -218,7 +218,7 @@ x-referee-bibliography-entries: 27
 ```
 
 The style is returned explicitly because detection can fail and a requested
-style can be one we do not ship — "which stylesheet formatted this" is never
+style can be one we do not ship - "which stylesheet formatted this" is never
 assumed to be what was asked for.
 
 ---
@@ -238,7 +238,7 @@ shorter, and every citation is still there.
 ## Known limits
 
 - LaTeX, not PDF. Compiling is left to the user (`pdflatex` or Overleaf).
-- Figures and tables are not emitted — only their captions were parsed.
+- Figures and tables are not emitted - only their captions were parsed.
 - In-text citation *numbering* comes from LaTeX; only the bibliography entry
   *formatting* comes from CSL. For an author-year style the body would need
   `natbib` to render `(Smith, 2019)` rather than `[1]`.

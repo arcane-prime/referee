@@ -129,7 +129,7 @@ export default function EditPanel({
           approve it, and any edit that would drop a citation is refused rather
           than applied. One command changes at most{" "}
           {MAX_CHANGES_PER_COMMAND} paragraphs, so a whole-paper instruction
-          will only reach the first few — run it again to continue.
+          will only reach the first few - run it again to continue.
         </p>
 
         <textarea

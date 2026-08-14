@@ -1,4 +1,4 @@
-# Review — peer review by an LLM, grounded in real sources
+# Review - peer review by an LLM, grounded in real sources
 
 **Module:** `backend/app/modules/review/`
 **Route:** `POST /papers/{paper_id}/review`
@@ -34,7 +34,7 @@ away and forced to `insufficient_evidence`.
 This means anti-hallucination does not depend on the model being honest. A
 model that invents a supporting sentence fails a string comparison.
 
-The model also never sees the reference list — not the parsed entries, not the
+The model also never sees the reference list - not the parsed entries, not the
 unparsed ones. It only ever sees sentences, or one claim plus one abstract. It
 cannot cite what it was never shown.
 
@@ -67,7 +67,7 @@ async def complete_json(system, user, schema, schema_name, max_tokens) -> dict
 ```
 
 Every model call in the codebase returns JSON matching a schema the caller
-supplies. There is deliberately **no free-text completion** — a backend that
+supplies. There is deliberately **no free-text completion** - a backend that
 could return prose would invite someone to parse it.
 
 The schema travels with the request because the schema *is* the safety
@@ -88,7 +88,7 @@ The real backend, talking to OpenAI's chat completions API.
 
 `strict: true` turns on constrained decoding, so the model cannot produce a
 response that violates the schema. Temperature is `0` because every call is a
-judgement, not writing — two runs over the same paper should agree.
+judgement, not writing - two runs over the same paper should agree.
 
 `_content_of()` handles two awkward cases: content arriving as a list of parts
 rather than a string, and `finish_reason == "length"`, which means the answer
@@ -100,7 +100,7 @@ list that looks like a clean review.
 
 An offline backend returning canned answers, or an empty response shaped to
 the requested schema. It records every call so tests can assert what was
-actually asked. With no API key configured, this is what gets wired in — so the
+actually asked. With no API key configured, this is what gets wired in - so the
 whole app runs, and the review returns an empty but well-formed result.
 
 ### `provider/sentence_provider.py`
@@ -117,17 +117,17 @@ Splits blocks into sentences **in code**, not by asking the model.
 | `_is_reportable()` | skip fragments under `MIN_REPORTABLE_CHARS` |
 
 Each `Sentence` carries `block_id`, `index`, `start`, `end`, `text`, and
-`ref_ids` — the citations that fall inside its character range.
+`ref_ids` - the citations that fall inside its character range.
 
 **Why this is in code.** If the model chose the sentences, a finding could
 point at text that is not in the paper. Because sentences are derived, every
 finding has a real anchor a reader can check. On our test paper, 0 of 189
 findings had a span mismatch.
 
-`_is_false_break()` handles abbreviations — "et al." and "Fig. 2" are not
+`_is_false_break()` handles abbreviations - "et al." and "Fig. 2" are not
 sentence ends. `ABBREVIATIONS` and the `INITIAL` pattern catch the common ones.
 
-### `provider/support_provider.py` — the grounded pass
+### `provider/support_provider.py` - the grounded pass
 
 For one claim and one cited source, ask: does the abstract support this?
 
@@ -146,14 +146,14 @@ collapses whitespace and lowercases, and nothing else. It does not do fuzzy
 matching, because a fuzzy match would accept a paraphrase, and a paraphrased
 "quote" is exactly the thing being guarded against.
 
-`MIN_QUOTE_CHARS` (12) rejects trivially short quotes — a three-word fragment
+`MIN_QUOTE_CHARS` (12) rejects trivially short quotes - a three-word fragment
 appears in almost any abstract and verifies nothing.
 
 References with no abstract return `None` before any model call. There is
 nothing to check against, and judging from a title alone is the failure this
 design exists to prevent.
 
-### `provider/claim_provider.py` — finding uncited claims
+### `provider/claim_provider.py` - finding uncited claims
 
 | Function | What it does |
 |---|---|
@@ -167,7 +167,7 @@ outside the batch is discarded. This is what stops it inventing a sentence.
 `limit` allows early stopping: once enough claims are found, remaining batches
 are skipped. Without it, a 438-sentence paper cost 22 calls to keep 12 results.
 
-### `provider/discovery_provider.py` — finding missing work
+### `provider/discovery_provider.py` - finding missing work
 
 For a claim with no citation, search the literature for works that could
 support it.
@@ -204,13 +204,13 @@ normal case; reporting it would bury the few that matter.
 **`NON_CITING_BLOCK_KINDS`** = `{abstract, caption, heading, formula}`. By
 academic convention abstracts do not carry citations, so every factual sentence
 in one looks like a missing citation and none of them are. On the first real
-paper this produced 4 bad findings out of 12 — the fastest way to teach a
+paper this produced 4 bad findings out of 12 - the fastest way to teach a
 researcher to ignore the other 8.
 
 **`DISCOVERY_BUDGET_SECONDS`** (25s) caps the discovery pass. Losing it costs
 nothing structural: those claims still report as `uncited_claim`, just without
 suggested sources. It exists because discovery is the only part depending on an
-outside service, and its failure mode is not an error but a long silence —
+outside service, and its failure mode is not an error but a long silence -
 measured at 33 seconds for a single call that returned nothing when OpenAlex
 was out of quota.
 
@@ -225,7 +225,7 @@ three works is one claim to a reader, not three findings.
   quote**
 - a `missing_citation` survives only if some suggestion carries a **real
   identifier**
-- an `uncited_claim` is always grounded — it makes no external claim
+- an `uncited_claim` is always grounded - it makes no external claim
 
 Anything else is discarded, however confident the model was.
 
@@ -238,7 +238,7 @@ Anything else is discarded, however confident the model was.
 Query flags: `check_support`, `find_uncited_claims`, `find_missing_work`.
 
 1. Load the document from the stored revision
-2. Load references from `library.json` — **not** by re-resolving
+2. Load references from `library.json` - **not** by re-resolving
 3. Run the enabled passes
 4. Return findings plus a summary
 

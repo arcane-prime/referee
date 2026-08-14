@@ -1,4 +1,4 @@
-# Verification — checking references against real databases
+# Verification - checking references against real databases
 
 **Module:** `backend/app/modules/resolution/`
 **Route:** `POST /papers/{paper_id}/resolve`
@@ -17,7 +17,7 @@ the results, and record one of three answers:
 | Status | Meaning |
 |---|---|
 | `resolved` | we are confident this is the work, here is its DOI |
-| `ambiguous` | plausible matches, none convincing enough — candidates kept |
+| `ambiguous` | plausible matches, none convincing enough - candidates kept |
 | `unresolved` | nothing credible found, and we say so |
 
 The result is saved to `library.json`. Two later stages depend on it: the
@@ -68,8 +68,8 @@ Reference  →  library.json
 
 Two `Protocol` interfaces:
 
-- `SearchBackend` — `find_by_doi()`, `search()`
-- `AbstractBackend` — `find_abstract()`
+- `SearchBackend` - `find_by_doi()`, `search()`
+- `AbstractBackend` - `find_abstract()`
 
 Everything else talks to these, never to a specific API. This is what lets the
 whole stage be tested offline with fake backends returning canned records.
@@ -89,21 +89,21 @@ The main search client. OpenAlex is free and needs no key.
 
 Helper functions worth knowing:
 
-**`reconstruct_abstract()`** — OpenAlex does not store abstracts as text. It
+**`reconstruct_abstract()`** - OpenAlex does not store abstracts as text. It
 stores an *inverted index*: a map of word → positions. This rebuilds the
 sentence.
 
-**`looks_like_an_abstract()`** — sometimes the reconstructed text is not an
+**`looks_like_an_abstract()`** - sometimes the reconstructed text is not an
 abstract at all but a citation string. This rejects text under
 `MIN_ABSTRACT_CHARS` (180) or that looks citation-shaped (ends in a year, and
 short). Without it, the review would grade claims against a bibliography entry
 and produce nonsense.
 
-**`filter_safe()`** — OpenAlex's filter syntax treats `,` `|` `:` `?` `*` and
+**`filter_safe()`** - OpenAlex's filter syntax treats `,` `|` `:` `?` `*` and
 others as operators. A title like *"Can active memory replace attention?"*
 returns HTTP 400 unless those are stripped.
 
-**`LONGEST_WORTHWHILE_WAIT_SECONDS`** — when the daily quota is exhausted,
+**`LONGEST_WORTHWHILE_WAIT_SECONDS`** - when the daily quota is exhausted,
 OpenAlex replies with a `retry-after` measured in *hours*. Rather than hang, we
 fail fast with a message stating the real wait ("resets in 19.8 hours").
 
@@ -119,10 +119,10 @@ match but no abstract.
 ### `provider/fallback_search_provider.py`
 
 Wraps both clients into one `SearchBackend`. Tries OpenAlex first, falls back
-to Semantic Scholar. The rest of the code never knows which one answered — it
+to Semantic Scholar. The rest of the code never knows which one answered - it
 only sees `search_api` reported as `"openalex+semantic_scholar"`.
 
-### `provider/matcher_provider.py` — where the stage lives or dies
+### `provider/matcher_provider.py` - where the stage lives or dies
 
 Pure scoring, no I/O. This decides whether a candidate really is the cited work.
 
@@ -134,7 +134,7 @@ Pure scoring, no I/O. This decides whether a candidate really is the cited work.
 | authors | 0.25 | `author_similarity()` |
 | year | 0.15 | `year_similarity()` |
 
-Year scoring is forgiving by design — `YEAR_SCORES` gives 1.0 for an exact
+Year scoring is forgiving by design - `YEAR_SCORES` gives 1.0 for an exact
 match, 0.85 for one year out, 0.5 for two. Preprints and published versions
 often differ by a year and are the same work.
 
@@ -142,13 +142,13 @@ often differ by a year and are the same work.
 
 | Rule | Value |
 |---|---|
-| `RESOLVED_THRESHOLD` | 0.82 — accept |
-| `AMBIGUOUS_THRESHOLD` | 0.55 — below this, unresolved |
-| `MIN_MARGIN_OVER_RUNNER_UP` | 0.04 — must beat second place by this much |
+| `RESOLVED_THRESHOLD` | 0.82 - accept |
+| `AMBIGUOUS_THRESHOLD` | 0.55 - below this, unresolved |
+| `MIN_MARGIN_OVER_RUNNER_UP` | 0.04 - must beat second place by this much |
 
 **`collapse_duplicates()`** exists because of a real bug. A paper published at
 EMNLP and also on arXiv returned two candidates, both scoring 1.00. The margin
-rule then declared it *ambiguous* — two perfect matches looked like confusion.
+rule then declared it *ambiguous* - two perfect matches looked like confusion.
 This function detects that two records describe the same work
 (`describe_the_same_work()`), and keeps the better one
 (`better_record_of()`, which prefers a published DOI over a preprint one via

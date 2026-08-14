@@ -1,4 +1,4 @@
-# Extraction — turning a PDF into a structured document
+# Extraction - turning a PDF into a structured document
 
 **Module:** `backend/app/modules/extraction/`
 **Route:** `POST /papers/{paper_id}/extract`
@@ -9,7 +9,7 @@
 
 A researcher uploads a PDF. This stage turns that PDF into a structured
 document we can work with: the title, the authors, the sections, the
-paragraphs, and — most importantly — every citation as a separate object
+paragraphs, and - most importantly - every citation as a separate object
 rather than as text.
 
 The output is saved to disk as `rev_0.json`. Everything later in the app reads
@@ -82,7 +82,7 @@ ExtractionResultDto → the browser
 
 A `Protocol` (an interface) with two methods: `parse()` and `is_alive()`.
 
-Nothing else in the codebase knows GROBID exists — it only knows "something
+Nothing else in the codebase knows GROBID exists - it only knows "something
 that can parse a PDF". `ExtractionProvider` is typed against this interface, so
 which parser is used is a wiring decision made in one place
 (`api/dependencies.py`). Swapping GROBID for another parser means one new file
@@ -136,7 +136,7 @@ Walks the TEI document and builds our `Document`.
 | `_level()` | heading depth, from the section numbering |
 | `_floats()` | figure and table captions, collected into one section |
 
-### `provider/inline_provider.py` — the tricky one
+### `provider/inline_provider.py` - the tricky one
 
 This is the hardest file in the project. XML has "mixed content": text can sit
 both *inside* a tag and *after* it. Getting this wrong drops words or leaves
@@ -159,8 +159,8 @@ prose would contain stray brackets like `"…dominate NLP [". "]"`. Worse, an AI
 editing that prose could move or delete them.
 
 `_absorb_delimiters()` pulls those brackets into the `CiteNode`, and
-`_merge_adjacent_citations()` joins `[12, 13]` — which GROBID reports as two
-separate refs with a comma between — back into one citation act.
+`_merge_adjacent_citations()` joins `[12, 13]` - which GROBID reports as two
+separate refs with a comma between - back into one citation act.
 
 These two run alternately until nothing changes, up to `MAX_NORMALISE_PASSES`
 (4), because fixing one can expose the other.
@@ -186,7 +186,7 @@ Reads the bibliography at the end of the paper.
 
 Two rules hold here. **`raw` is always kept**, even when parsing fails, so a
 bad entry can still be shown to the user and searched as a plain string.
-**Nothing is dropped** — the brief explicitly forbids silently losing a
+**Nothing is dropped** - the brief explicitly forbids silently losing a
 citation.
 
 ### `provider/style_provider.py`
@@ -257,7 +257,7 @@ dropped citation.
   detected but not fixture-tested.
 - Footnotes are not captured.
 - Reference parsing degrades on mathematics papers. On one test paper 6 of 38
-  references failed to resolve — two had the journal name glued into the title
+  references failed to resolve - two had the journal name glued into the title
   by GROBID, one had no title at all, and three parsed perfectly but are simply
   absent from the databases.
 - Block-level page coordinates are sparse, though inline nodes all have them.

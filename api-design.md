@@ -8,9 +8,9 @@ one does. Part 2 shows the JSON that goes in and comes back.
 
 ---
 
-# Part 1 — What each module offers
+# Part 1 - What each module offers
 
-## Module: `papers` — getting a paper into the system
+## Module: `papers` - getting a paper into the system
 
 | Method | Endpoint | What it does |
 |---|---|---|
@@ -22,14 +22,14 @@ to start with the bytes `%PDF-`) and must be under 50 MB. A file merely *named*
 
 ---
 
-## Module: `extraction` — turning the PDF into a document
+## Module: `extraction` - turning the PDF into a document
 
 | Method | Endpoint | What it does |
 |---|---|---|
 | `POST` | `/papers/{id}/extract` | Parse the PDF into sections, paragraphs and citations. |
 | `GET` | `/parser/status` | Is the PDF parser (GROBID) running? |
 
-**`/extract`** is fast — under a second. It sends the PDF to GROBID, converts
+**`/extract`** is fast - under a second. It sends the PDF to GROBID, converts
 the result into our own document format, and saves it as revision 0.
 
 It does **not** check any references against the internet. That is a separate
@@ -40,7 +40,7 @@ saved on disk, without calling GROBID again. Useful while developing.
 
 ---
 
-## Module: `resolution` — checking the references are real
+## Module: `resolution` - checking the references are real
 
 | Method | Endpoint | What it does |
 |---|---|---|
@@ -52,16 +52,16 @@ one is a lookup against a free public database.
 
 Every reference comes back as one of three things, and the difference matters:
 
-- **resolved** — we are confident this is the work, here is its DOI
-- **ambiguous** — plausible matches, none convincing enough
-- **unresolved** — nothing credible found, and we say so
+- **resolved** - we are confident this is the work, here is its DOI
+- **ambiguous** - plausible matches, none convincing enough
+- **unresolved** - nothing credible found, and we say so
 
 The whole call is capped at 75 seconds. If the databases are throttling us it
 gives up and says so rather than hanging, and the parsed paper is unaffected.
 
 ---
 
-## Module: `review` — the AI peer review
+## Module: `review` - the AI peer review
 
 | Method | Endpoint | What it does |
 |---|---|---|
@@ -91,7 +91,7 @@ honest review of everything else.
 
 ---
 
-## Module: `editing` — changing the paper with plain English
+## Module: `editing` - changing the paper with plain English
 
 | Method | Endpoint | What it does |
 |---|---|---|
@@ -108,7 +108,7 @@ rewrite would have dropped a citation, that paragraph is rejected and named
 rather than quietly applied.
 
 **`/edit/apply`** takes the proposal back, plus a list of which paragraphs you
-approved, and writes a new version. The old version is never overwritten — the
+approved, and writes a new version. The old version is never overwritten - the
 paper accumulates revision 0, 1, 2 and so on.
 
 **`/document`** lets you read any of those versions back without re-parsing the
@@ -116,7 +116,7 @@ PDF.
 
 ---
 
-## Module: `export` — getting the paper back out
+## Module: `export` - getting the paper back out
 
 | Method | Endpoint | What it does |
 |---|---|---|
@@ -162,13 +162,13 @@ wrote, so review, editing and export never re-parse or re-search.
 ---
 ---
 
-# Part 2 — Request and response shapes
+# Part 2 - Request and response shapes
 
 ## Upload a paper
 
 `POST /papers` · form data, field name `file`
 
-**Response — 201**
+**Response - 201**
 
 ```json
 {
@@ -185,7 +185,7 @@ wrote, so review, editing and export never re-parse or re-search.
 
 `POST /papers/{id}/extract` · no body
 
-**Response — 200**
+**Response - 200**
 
 ```json
 {
@@ -230,7 +230,7 @@ wrote, so review, editing and export never re-parse or re-search.
 ```
 
 **The `inlines` list is the important part.** A paragraph is not a sentence of
-text — it is a list of pieces. `text` is ordinary prose. `cite` is a citation
+text - it is a list of pieces. `text` is ordinary prose. `cite` is a citation
 pointing at a reference id. There are also `math` and `xref` (figure and table
 references).
 
@@ -247,7 +247,7 @@ what it could not do, rather than returning fewer citations and staying quiet.
 
 `POST /papers/{id}/resolve` · no body
 
-**Response — 200**
+**Response - 200**
 
 ```json
 {
@@ -293,7 +293,7 @@ database returned this record. The AI is only ever allowed to add a citation
 pointing at one of those, which is what makes an invented reference impossible.
 
 `with_abstract` is counted separately from `resolved` because it is the number
-the review depends on — a reference can be correctly identified and still have
+the review depends on - a reference can be correctly identified and still have
 no abstract to check claims against.
 
 ---
@@ -302,7 +302,7 @@ no abstract to check claims against.
 
 `POST /papers/{id}/review` · no body
 
-**Response — 200**
+**Response - 200**
 
 ```json
 {
@@ -357,7 +357,7 @@ returns a quote, the server checks that the quote really appears in the
 abstract. If it does not, the verdict is thrown away and downgraded. That is why
 a finding can be trusted.
 
-`revision` says which version of the paper was reviewed — without it, findings
+`revision` says which version of the paper was reviewed - without it, findings
 about a paragraph a later edit removed would look like nonsense.
 
 ---
@@ -372,9 +372,9 @@ about a paragraph a later edit removed would look like nonsense.
 { "command": "make the introduction shorter" }
 ```
 
-Maximum 500 characters — it is an instruction, not a document.
+Maximum 500 characters - it is an instruction, not a document.
 
-**Response — 200**
+**Response - 200**
 
 ```json
 {
@@ -435,7 +435,7 @@ the paragraph and the reason, and the changes that did work are still offered.
 
 `POST /papers/{id}/edit/apply`
 
-**Request** — send the proposal back exactly as received, plus which paragraphs
+**Request** - send the proposal back exactly as received, plus which paragraphs
 you approved:
 
 ```json
@@ -447,7 +447,7 @@ you approved:
 
 Leaving out `approved` means all of them.
 
-**Response — 200**
+**Response - 200**
 
 ```json
 {
@@ -462,7 +462,7 @@ Leaving out `approved` means all of them.
 }
 ```
 
-Sending the whole proposal back keeps the server stateless — a proposal cannot
+Sending the whole proposal back keeps the server stateless - a proposal cannot
 expire because a process restarted. But it also means that by the time it
 arrives it is untrusted input, so before writing anything the server re-checks:
 
@@ -478,7 +478,7 @@ A tampered `after` list that quietly dropped a citation fails check 3.
 
 `GET /papers/{id}/document?revision=2`
 
-**Response — 200**
+**Response - 200**
 
 ```json
 {
@@ -490,7 +490,7 @@ A tampered `after` list that quietly dropped a citation fails check 3.
 ```
 
 Leave off `revision` to get the latest. `available_revisions` is returned
-because the history is a feature — every earlier version is still on disk.
+because the history is a feature - every earlier version is still on disk.
 
 ---
 
@@ -508,7 +508,7 @@ because the history is a feature — every earlier version is still on disk.
 }
 ```
 
-`detected_style: "unknown"` is a real answer, not a failure — it means the
+`detected_style: "unknown"` is a real answer, not a failure - it means the
 original paper's citation style could not be identified confidently, so the user
 should pick one.
 
@@ -555,11 +555,11 @@ person and may change.
 |---|---|---|
 | 400 | `invalid_upload` | not a PDF |
 | 404 | `paper_not_found` | no such paper id |
-| 409 | `not_extracted` | right request, wrong order — parse it first |
+| 409 | `not_extracted` | right request, wrong order - parse it first |
 | 409 | `edit_conflict` | the paper changed after the proposal was prepared |
 | 413 | `upload_too_large` | over 50 MB |
 | 422 | `extraction_failed` | the parser answered, but the file could not be used |
-| 422 | `edit_refused` | the edit would have damaged the paper — nothing written |
+| 422 | `edit_refused` | the edit would have damaged the paper - nothing written |
 | 500 | `storage_error` | could not read or write to disk |
 | 502 | `parser_unavailable` | GROBID unreachable |
 | 502 | `search_unavailable` | the reference databases are down or out of quota |
@@ -567,13 +567,13 @@ person and may change.
 
 Three distinctions that carry real information:
 
-- **502 versus 500** — 502 means the problem is in someone else's service,
+- **502 versus 500** - 502 means the problem is in someone else's service,
   nothing was half-saved, and trying again later is sensible. 500 means it was
   our fault.
-- **`parser_unavailable` versus `extraction_failed`** — the first means try
+- **`parser_unavailable` versus `extraction_failed`** - the first means try
   again. The second means the parser answered fine and the *file* is the
   problem, so retrying the same PDF will not help.
-- **409 versus 404** — the paper exists; you asked for a step out of order. The
+- **409 versus 404** - the paper exists; you asked for a step out of order. The
   fix is a different request, not a corrected id.
 
 ---

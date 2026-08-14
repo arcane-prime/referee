@@ -11,10 +11,10 @@ Its one hard guarantee: **an AI edit can never silently change your citations.**
 
 ## Tech stack
 
-**Backend** — Python 3.10+ · FastAPI · Pydantic v2 · uvicorn · httpx · lxml ·
+**Backend** - Python 3.10+ · FastAPI · Pydantic v2 · uvicorn · httpx · lxml ·
 citeproc-py · pytest · ruff
 
-**Frontend** — Next.js 16 · React 19 · TypeScript · plain CSS
+**Frontend** - Next.js 16 · React 19 · TypeScript · plain CSS
 
 **External services**
 
@@ -25,7 +25,7 @@ citeproc-py · pytest · ruff
 | Semantic Scholar | fallback lookup and abstracts (free, key optional) |
 | OpenAI `gpt-4.1-mini` | peer review and editing |
 
-**Storage** — the filesystem. No database.
+**Storage** - the filesystem. No database.
 
 ---
 
@@ -33,7 +33,7 @@ citeproc-py · pytest · ruff
 
 You need Python 3.10–3.14 and Node 18+. Docker is optional.
 
-### 1 — Backend
+### 1 - Backend
 
 ```bash
 cd backend
@@ -65,7 +65,7 @@ copy .env.example .env          # macOS/Linux: cp .env.example .env
 python -m uvicorn app.main:app --port 8000
 ```
 
-### 2 — Frontend
+### 2 - Frontend
 
 ```bash
 cd frontend
@@ -73,7 +73,7 @@ npm install
 npm run dev                     # http://localhost:3000
 ```
 
-### 3 — GROBID (optional)
+### 3 - GROBID (optional)
 
 ```bash
 docker run -d --name grobid -p 8070:8070 \
@@ -82,19 +82,19 @@ docker run -d --name grobid -p 8070:8070 \
 ```
 
 Model loading takes 20–90 seconds after the container reports `Up`. Check with
-`curl http://localhost:8070/api/isalive` — you want the literal `true`.
+`curl http://localhost:8070/api/isalive` - you want the literal `true`.
 
 The `JAVA_TOOL_OPTIONS` is **not optional on WSL2**: without it the JVM tries to
 read cgroup v2 memory limits, fails, and the container dies before GROBID
 starts. Use the CRF image (~300 MB), not the deep-learning one (~10 GB, wants a
 GPU).
 
-Skip this entirely if you like — with no `GROBID_URL` set, the app uses a public
+Skip this entirely if you like - with no `GROBID_URL` set, the app uses a public
 hosted instance.
 
 ### Configuration
 
-Everything lives in `backend/.env`. Copy `backend/.env.example` — every value in
+Everything lives in `backend/.env`. Copy `backend/.env.example` - every value in
 it matches the code's default, so an empty file and the example describe the
 same system.
 
@@ -105,7 +105,7 @@ OPENALEX_MAILTO=you@example.com   # optional, but gives a much higher free quota
 ```
 
 The app is built against the OpenAI API. Using another provider means one new
-file — see `design/review.md`.
+file - see `design/review.md`.
 
 **It runs with no setup at all.** No `.env`, no API key, no Docker: the app
 still starts and every screen works. Parsing falls back to public GROBID, and
@@ -116,20 +116,20 @@ results.
 
 ## Playing with it
 
-Open **http://localhost:3000** and drop in a PDF. An arXiv paper works best —
+Open **http://localhost:3000** and drop in a PDF. An arXiv paper works best -
 its references actually resolve.
 
 1. **Parsing starts on upload.** No button. The paper appears in under a second,
    and reference checking fills in underneath over the next 30–60 seconds.
-2. **Left pane — your paper.** Citations render as chips carrying reference ids.
+2. **Left pane - your paper.** Citations render as chips carrying reference ids.
    A revision badge tracks edits. Scroll down for the reference list and export.
-3. **Right pane, "Peer review"** — click *Get suggestions*. Each finding is
+3. **Right pane, "Peer review"** - click *Get suggestions*. Each finding is
    anchored to an exact sentence and carries either a verified quote from the
    cited source's abstract, or a real linkable suggestion.
-4. **Right pane, "Edit"** — try *"make the introduction shorter"*. You get a
+4. **Right pane, "Edit"** - try *"make the introduction shorter"*. You get a
    before/after diff per paragraph with a citation summary. Nothing is written
    until you tick the changes and hit apply.
-5. **Export** — bottom of the left pane. Pick a citation style, download the
+5. **Export** - bottom of the left pane. Pick a citation style, download the
    `.tex`. It compiles with a single `pdflatex` run.
 
 **Worth trying:** ask it to `remove all citations from the paper`. It will
@@ -152,7 +152,7 @@ npm run typecheck
 npm run build
 ```
 
-No network, no API key and no Docker needed — the parser tests read a committed
+No network, no API key and no Docker needed - the parser tests read a committed
 file of real GROBID output, and the search and LLM layers sit behind interfaces
 with offline stand-ins.
 
@@ -166,14 +166,14 @@ The virtual environment is not active. Re-run the activate step, verify with
 over bare `uvicorn`.
 
 **`pip install` starts compiling `lxml` or `pydantic-core`, then fails**
-pip is running against a different Python than you think — almost always because
+pip is running against a different Python than you think - almost always because
 the venv is not active. Check `python --version` first. If your default Python
 is genuinely unsupported, build the venv against a specific one:
 `py -3.12 -m venv .venv`.
 
 **GROBID keeps dying**
 It needs ~2.4 GB of RAM and Docker may OOM-kill it. `docker start grobid` brings
-it back. Only uploading a *new* PDF needs it — review, editing and export all
+it back. Only uploading a *new* PDF needs it - review, editing and export all
 read from disk.
 
 **Reference checking is slow or finds nothing**
@@ -183,15 +183,15 @@ OpenAlex has a daily quota. Setting `OPENALEX_MAILTO` raises it substantially.
 
 ## How it works
 
-**Start with [higher-level-design.md](higher-level-design.md)** — the whole
+**Start with [higher-level-design.md](higher-level-design.md)** - the whole
 system in plain words, with a diagram.
 
 ### The two system-design pieces
 
 | Piece | Where it is covered |
 |---|---|
-| **Citation parsing** — the pipeline, the intermediate representation, where CSL-JSON fits, how styles and failures are handled | [design/extraction.md](design/extraction.md) → [design/verification.md](design/verification.md) → [design/export.md](design/export.md) |
-| **The agent** — how a command becomes actions, how operations are planned and run, how OpenAlex and Semantic Scholar are called, how citations survive edits | [design/edit.md](design/edit.md) → [design/review.md](design/review.md) |
+| **Citation parsing** - the pipeline, the intermediate representation, where CSL-JSON fits, how styles and failures are handled | [design/extraction.md](design/extraction.md) → [design/verification.md](design/verification.md) → [design/export.md](design/export.md) |
+| **The agent** - how a command becomes actions, how operations are planned and run, how OpenAlex and Semantic Scholar are called, how citations survive edits | [design/edit.md](design/edit.md) → [design/review.md](design/review.md) |
 
 ### Everything else
 
@@ -206,7 +206,7 @@ system in plain words, with a diagram.
 | [design/edit.md](design/edit.md) | natural-language editing and citation safety |
 | [design/export.md](design/export.md) | LaTeX and CSL |
 
-If you only read one more after the overview, make it `design/edit.md` — the
+If you only read one more after the overview, make it `design/edit.md` - the
 citation-safety mechanism is the most interesting part.
 
 ---
@@ -214,13 +214,13 @@ citation-safety mechanism is the most interesting part.
 ## Known limitations
 
 - Only numbered citation style is proven against real GROBID output.
-- Reference parsing degrades on mathematics papers — 6 of 38 references failed
+- Reference parsing degrades on mathematics papers - 6 of 38 references failed
   on one test paper, each checked individually (two had the journal name glued
   into the title, one had no title, three are genuinely absent from the
   databases).
 - Some review findings flag the authors' own contribution claims, because the
   model sees sentences in isolation.
-- One edit command changes at most 8 paragraphs, and edits one block at a time —
+- One edit command changes at most 8 paragraphs, and edits one block at a time -
   paragraphs are never merged or split.
 - Export is LaTeX, not PDF. Structure survives the round trip; page layout and
   figures do not.
@@ -244,6 +244,6 @@ GROBID, OpenAlex, Semantic Scholar and OpenAI calls; the citation guarantee was
 tested by diffing every block before and after each edit rather than trusting
 the app's own summaries; each unresolved reference was checked by hand before
 being called a database gap rather than a bug; and an independent browser-driven
-test pass found three real defects that unit tests could not — all since fixed.
+test pass found three real defects that unit tests could not - all since fixed.
 
 Numbers quoted in this README and in `design/` are measured, not estimated.

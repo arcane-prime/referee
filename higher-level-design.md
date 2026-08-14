@@ -2,7 +2,7 @@
 
 **Diagram:** https://excalidraw.com/#json=C64ZG4E43_vYbprMB0VO6,ysppSaCXiyz4yZfaq4DhZA
 
-*(the board holds two diagrams — the first is from an earlier interview, the
+*(the board holds two diagrams - the first is from an earlier interview, the
 second one is this assignment)*
 
 If you would rather read than look at boxes, everything the diagram shows is
@@ -32,13 +32,13 @@ change your citations.**
 
 ## The pieces
 
-**The browser** — the researcher's screen. One page, split into two: the paper
+**The browser** - the researcher's screen. One page, split into two: the paper
 on the left, the AI on the right.
 
-**The Referee API** — a Python server holding all the logic. It talks to four
+**The Referee API** - a Python server holding all the logic. It talks to four
 outside services and stores everything as plain files.
 
-**File storage** — one folder per paper. No database. A paper is a small amount
+**File storage** - one folder per paper. No database. A paper is a small amount
 of data used by one person, so a database would be machinery bought for a
 problem this does not have.
 
@@ -47,7 +47,7 @@ problem this does not have.
 | | What it is for |
 |---|---|
 | **GROBID** | turns a PDF into structured XML. Runs in Docker, or use a free public one |
-| **OpenAlex** | a free database of academic papers — the main reference lookup |
+| **OpenAlex** | a free database of academic papers - the main reference lookup |
 | **Semantic Scholar** | a second database, used as backup and for abstracts |
 | **OpenAI** | the language model that reviews and rewrites |
 
@@ -62,7 +62,7 @@ model provider, or the PDF parser, means writing one new file.
 the researcher's original file is always there to download.
 
 **2. Parse** *(under a second)*. GROBID converts the PDF to XML; the app turns
-that into its own document format — sections, paragraphs, citations. Saved as
+that into its own document format - sections, paragraphs, citations. Saved as
 revision 0.
 
 **3. Check the references** *(about 30 seconds for 40 references)*. Every entry
@@ -100,7 +100,7 @@ Most tools would store this:
 
 > Transformers dominate NLP [12]. Recent work extends this to vision [13, 14].
 
-as exactly that — one string. Referee stores it as a *list of pieces*:
+as exactly that - one string. Referee stores it as a *list of pieces*:
 
 ```
 a piece of text:   "Transformers dominate NLP "
@@ -112,7 +112,7 @@ a piece of text:   "."
 
 The characters `[12]` are stored **nowhere**. A citation is an object that
 points at a bibliography entry. The `[12]` a reader sees is printed at the last
-moment — by the screen when displaying, and by the citation formatter when
+moment - by the screen when displaying, and by the citation formatter when
 exporting. That is also why the same paper can print as IEEE or APA without the
 stored data changing at all.
 
@@ -133,7 +133,7 @@ Then the app puts the **original citation objects** back wherever the
 placeholders ended up.
 
 The AI decided *where* the citation goes. It never had the ability to change
-*what* the citation is — it never saw a reference id, a title, or an author.
+*what* the citation is - it never saw a reference id, a title, or an author.
 
 If a placeholder comes back missing, duplicated, or invented, the edit is
 **rejected**, and the researcher is told which one and in which paragraph. It is
@@ -166,7 +166,7 @@ Referee handles this structurally rather than by asking nicely:
   quote really appears in the abstract. If it does not, the verdict is thrown
   away.
 - **The model may only add a citation to a work a database returned.** A
-  reference merely read off the user's own PDF is not enough — it has to have
+  reference merely read off the user's own PDF is not enough - it has to have
   been found, with a real identifier.
 
 So "it never makes things up" is not a hope about the prompt. It is a property
@@ -187,7 +187,7 @@ smaller number. You can export version 0 and version 3 and compare them to see
 exactly what the AI changed.
 
 **The reference list only ever grows.** Once a work has been found in a
-database, it stays — even if the edit that discovered it was rejected. Otherwise
+database, it stays - even if the edit that discovered it was rejected. Otherwise
 an older version of the paper could end up pointing at a reference that had
 disappeared.
 
@@ -199,8 +199,8 @@ Every outside service can fail without taking the app down.
 
 | If this is unavailable | You lose | You keep |
 |---|---|---|
-| GROBID | uploading a **new** paper | everything else — review, edit, export |
-| OpenAlex | — | Semantic Scholar picks up the search |
+| GROBID | uploading a **new** paper | everything else - review, edit, export |
+| OpenAlex | - | Semantic Scholar picks up the search |
 | Both databases | checking references, suggesting sources | the parsed paper, and review of uncited claims |
 | The language model | review and editing | the parse, the references, and export |
 | No API key at all | real review and editing | the app still runs, using an offline stub |
@@ -222,7 +222,7 @@ reports its own failures rather than hiding them:
 
 - citation markers found in the text that could not be matched to any
   bibliography entry
-- references whose text the parser could not understand — kept and shown
+- references whose text the parser could not understand - kept and shown
   verbatim rather than dropped
 - references that were searched for and genuinely not found, each with a
   plain-English reason
@@ -234,7 +234,7 @@ reports its own failures rather than hiding them:
 On one real test paper, 6 of 38 references failed to resolve. Each was checked
 by hand: two had the journal name accidentally glued into the title by the
 parser, one had no title at all, and three parsed perfectly but are simply
-absent from the databases — a 1967 Soviet journal, a paper published too
+absent from the databases - a 1967 Soviet journal, a paper published too
 recently to be indexed, and a poorly indexed one from 2009.
 
 That number is reported as it is. A tool that quietly showed 38 of 38 would be
@@ -249,10 +249,10 @@ out here end to end.
 
 ---
 
-## Piece 1 — Citation parsing
+## Piece 1 - Citation parsing
 
 **The job:** turn a PDF into citations that are structured, normalised, and
-checkable — handling more than one citation style, and surfacing what could not
+checkable - handling more than one citation style, and surfacing what could not
 be parsed rather than dropping it.
 
 ### The pipeline
@@ -297,7 +297,7 @@ This is the part that matters. **A paragraph is a list of nodes, not a string.**
 ```
 Block
  └── inlines[]
-       TextRun    ordinary prose — the only thing an AI may write
+       TextRun    ordinary prose - the only thing an AI may write
        CiteNode   points at reference ids. Holds NO printed text
        XRefNode   a figure, table or equation reference
        MathNode   a formula
@@ -312,7 +312,7 @@ way rather than as text:
 
 - an AI rewriting prose cannot delete a citation, because the citation was
   never part of the prose it was handed
-- citation preservation becomes **countable** — `ref_id_counts()` returns
+- citation preservation becomes **countable** - `ref_id_counts()` returns
   `{ref_id: times cited}`, so "did this edit break anything?" is arithmetic
   rather than judgement
 
@@ -328,7 +328,7 @@ fetched from OpenAlex / S2      ──┘
 ```
 
 The renderer never needs to know where a reference came from. No string
-template anywhere in the codebase formats a citation — which is why the same
+template anywhere in the codebase formats a citation - which is why the same
 paper prints as IEEE, APA or Nature with no change to the stored data.
 
 ### Handling styles
@@ -356,17 +356,17 @@ The delimiter problem is worth naming because it is where most of the
 engineering went. GROBID marks `[12]` as just `12` inside a `<ref>` tag,
 leaving the brackets outside as ordinary text. Left alone, the prose would
 contain stray `[` and `]` that an AI edit could move or delete.
-`InlineProvider` absorbs them into the citation node, and merges `[12, 13]` —
-which GROBID reports as two separate refs with a comma between — back into one
+`InlineProvider` absorbs them into the citation node, and merges `[12, 13]` -
+which GROBID reports as two separate refs with a comma between - back into one
 citation act. On the test paper this yields **0 stray brackets across 58
 citations**.
 
 ---
 
-## Piece 2 — The agent
+## Piece 2 - The agent
 
 **The job:** turn a plain-English command into changes the user approves, and
-review the paper against real sources — without ever inventing a citation or
+review the paper against real sources - without ever inventing a citation or
 damaging one.
 
 ### How a command becomes actions
@@ -425,7 +425,7 @@ is in a position to do the other's damage.
 
 | Operation | Allowed effect on citation counts |
 |---|---|
-| `shorten_block` | **identical** — nothing added or removed |
+| `shorten_block` | **identical** - nothing added or removed |
 | `rewrite_block` | **identical** |
 | `add_citation` | may only **increase**, and only from the library |
 | `delete_block` | may decrease, but every lost reference is **named** in the preview |
@@ -466,7 +466,7 @@ than the last:
 ```
 
 **Sentences are derived in code, not chosen by the model.** That is why every
-finding carries a real block id, sentence index and character span — a finding
+finding carries a real block id, sentence index and character span - a finding
 can always be traced back to text that actually exists.
 
 ### How the databases are called
@@ -499,7 +499,7 @@ costs nothing and a demo is repeatable.
 ### How citations survive, in one line
 
 The model is handed prose with the citations replaced by tokens it cannot read,
-and code puts the real citation objects back where those tokens ended up — so
+and code puts the real citation objects back where those tokens ended up - so
 an edit that damages a citation is not something we detect and fix, it is
 something the pipeline cannot express.
 
