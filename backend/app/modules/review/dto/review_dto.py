@@ -17,6 +17,7 @@ class ReviewSummaryDto(BaseModel):
 
 class ReviewResultDto(BaseModel):
     paper_id: str
+    revision: int
     reviewed_at: datetime
     model: str
     findings: list[Finding] = Field(default_factory=list)

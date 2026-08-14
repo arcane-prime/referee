@@ -57,13 +57,21 @@ class ExtractionProvider:
             summary=self._summarise(document, references),
         )
 
-    def load_document(self, paper_id: str) -> Document:
-        payload = self._storage.read_revision(paper_id, 0)
+    def load_document(
+        self, paper_id: str, revision: int | None = None
+    ) -> tuple[Document, int]:
+        number = (
+            self._storage.latest_revision(paper_id) if revision is None else revision
+        )
+        payload = (
+            None if number is None else self._storage.read_revision(paper_id, number)
+        )
+
         if payload is None:
             raise NotExtractedError(
                 f"Paper '{paper_id}' has not been extracted yet. Run extract first."
             )
-        return Document.model_validate_json(payload)
+        return Document.model_validate_json(payload), number
 
     def load_references(self, paper_id: str) -> list[RawReference]:
         tei_xml = self._storage.read_tei(paper_id)

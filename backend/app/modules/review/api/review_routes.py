@@ -26,6 +26,7 @@ router = APIRouter(tags=["review"])
 )
 async def review_paper(
     paper_id: str,
+    revision: int | None = Query(default=None),
     check_support: bool = Query(default=True),
     find_uncited_claims: bool = Query(default=True),
     find_missing_work: bool = Query(default=True),
@@ -34,7 +35,7 @@ async def review_paper(
     review: ReviewProvider = Depends(get_review_provider),
     llm: LlmBackend = Depends(get_llm_backend),
 ) -> ReviewResultDto:
-    document = extraction.load_document(paper_id)
+    document, number = extraction.load_document(paper_id, revision)
 
     references: list[Reference] = []
     if check_support:
@@ -50,6 +51,7 @@ async def review_paper(
 
     return ReviewResultDto(
         paper_id=paper_id,
+        revision=number,
         reviewed_at=datetime.now(timezone.utc),
         model=llm.name,
         findings=findings,

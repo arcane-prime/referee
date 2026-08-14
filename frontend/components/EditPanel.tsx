@@ -25,6 +25,8 @@ const OPERATION_LABEL: Record<OperationKind, string> = {
   delete_block: "deleted",
 };
 
+const MAX_CHANGES_PER_COMMAND = 8;
+
 type Status =
   | { phase: "idle" }
   | { phase: "planning" }
@@ -52,11 +54,15 @@ export default function EditPanel({
 
   useEffect(() => {
     if (status.phase === "ready" || status.phase === "applying") {
-      onProposal(status.result.proposal.patches.map((patch) => patch.block_id));
+      onProposal(
+        status.result.proposal.patches
+          .map((patch) => patch.block_id)
+          .filter((blockId) => approved.has(blockId)),
+      );
     } else {
       onProposal([]);
     }
-  }, [status, onProposal]);
+  }, [status, approved, onProposal]);
 
   const plan = useCallback(async () => {
     const instruction = command.trim();
@@ -120,7 +126,9 @@ export default function EditPanel({
         <p className="hint">
           Describe a change in plain English. Nothing is written until you
           approve it, and any edit that would drop a citation is refused rather
-          than applied.
+          than applied. One command changes at most{" "}
+          {MAX_CHANGES_PER_COMMAND} paragraphs, so a whole-paper instruction
+          will only reach the first few — run it again to continue.
         </p>
 
         <textarea
@@ -220,6 +228,14 @@ function Proposal({
       <div className="panel">
         <p className="panel__title">Proposed changes</p>
         <p className="hint">{result.message}</p>
+        {proposal.patches.length + proposal.rejected.length >=
+          MAX_CHANGES_PER_COMMAND && (
+          <p className="hint hint--warn">
+            This command reached the {MAX_CHANGES_PER_COMMAND}-paragraph limit,
+            so later parts of the paper were not looked at. Run it again to
+            continue.
+          </p>
+        )}
         <CitationSummary delta={proposal.citations} />
       </div>
 

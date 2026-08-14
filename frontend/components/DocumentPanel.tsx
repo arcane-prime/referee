@@ -19,6 +19,25 @@ function referenceQuality(reference: ResolvedReference): "good" | "failed" {
   return reference.parsed?.title ? "good" : "failed";
 }
 
+function countLive(document: CurrentDocument["document"]) {
+  let blocks = 0;
+  let citations = 0;
+  let unlinked = 0;
+
+  for (const section of document.sections) {
+    for (const block of section.blocks) {
+      blocks += 1;
+      for (const node of block.inlines) {
+        if (node.kind !== "cite") continue;
+        citations += 1;
+        if (node.ref_ids.length === 0) unlinked += 1;
+      }
+    }
+  }
+
+  return { sections: document.sections.length, blocks, citations, unlinked };
+}
+
 export default function DocumentPanel({
   extraction,
   resolve,
@@ -38,6 +57,7 @@ export default function DocumentPanel({
     (reference) => referenceQuality(reference) === "failed",
   );
   const targeted = new Set(targetedBlocks);
+  const live = countLive(document);
 
   return (
     <section className="stack">
@@ -49,13 +69,13 @@ export default function DocumentPanel({
         <p className="hint">{document.authors.join(" · ")}</p>
 
         <div className="stats">
-          <Stat label="Sections" value={summary.section_count} />
-          <Stat label="Blocks" value={summary.block_count} />
-          <Stat label="Citations" value={summary.citation_count} />
+          <Stat label="Sections" value={live.sections} />
+          <Stat label="Blocks" value={live.blocks} />
+          <Stat label="Citations" value={live.citations} />
           <Stat
             label="Unlinked"
-            value={summary.unlinked_citation_count}
-            warn={summary.unlinked_citation_count > 0}
+            value={live.unlinked}
+            warn={live.unlinked > 0}
           />
           <Stat label="References" value={summary.references.total} />
           <Stat

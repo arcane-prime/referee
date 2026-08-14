@@ -1,8 +1,10 @@
-from pydantic import ValidationError
+from pydantic import TypeAdapter, ValidationError
 
 from app.domain.document import Document
-from app.domain.edit import EditPlan
+from app.domain.edit import EditOperation, EditPlan
 from app.modules.review.provider.llm_backend import LlmBackend
+
+OPERATION_ADAPTER = TypeAdapter(EditOperation)
 
 MAX_OPERATIONS = 8
 MAX_BLOCKS_OFFERED = 120
@@ -99,20 +101,33 @@ class PlanProvider:
         known = {block.id for block in document.blocks()}
         operations = [op for op in operations if op.get("block_id") in known]
 
-        try:
-            return EditPlan(
-                command=command,
-                intent=payload.get("intent") or command,
-                scope=payload.get("scope"),
-                note=payload.get("note"),
-                operations=operations[:MAX_OPERATIONS],
+        valid = []
+        dropped = 0
+        for raw in operations[:MAX_OPERATIONS]:
+            try:
+                valid.append(OPERATION_ADAPTER.validate_python(raw))
+            except ValidationError:
+                dropped += 1
+
+        return EditPlan(
+            command=command,
+            intent=payload.get("intent") or command,
+            scope=payload.get("scope"),
+            note=self._note(payload.get("note"), valid, dropped),
+            operations=valid,
+        )
+
+    @staticmethod
+    def _note(note: str | None, valid: list, dropped: int) -> str | None:
+        if dropped and not valid:
+            return (
+                f"The plan named {dropped} change(s) this tool cannot carry out, "
+                f"so nothing was proposed. Adding a citation needs a reference "
+                f"that was already found in a database."
             )
-        except ValidationError:
-            return EditPlan(
-                command=command,
-                intent=payload.get("intent") or command,
-                note="The plan could not be read as a valid set of operations.",
-            )
+        if dropped:
+            return f"{dropped} proposed change(s) were not valid and were skipped."
+        return note
 
     @staticmethod
     def _clean(raw: dict) -> dict | None:
